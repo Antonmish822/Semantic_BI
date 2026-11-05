@@ -1,0 +1,45 @@
+{
+  "deal_stages": [
+    {
+      "ID": "3034",
+      "ENTITY_ID": "DEAL_STAGE_58",
+      "STATUS_ID": "C58:UC_SYT75J",
+      "NAME": "Взят в работу",
+      "NAME_INIT": "",
+      "SORT": "12",
+      "SYSTEM": "N",
+      "CATEGORY_ID": "58",
+      "COLOR": "#ace9fb",
+      "SEMANTICS": null,
+      "DESCRIPTION": "",
+      "EXTRA": {
+        "SEMANTICS": "process",
+        "COLOR": "#ace9fb"
+      }
+    }
+  ],
+  "deal_categories": [
+    {
+      "ID": "58",
+      "CREATED_DATE": "2024-09-04T03:00:00+03:00",
+      "NAME": "GLS",
+      "SORT": "400",
+      "IS_LOCKED": "N"
+    }
+  ],
+  "sources": [
+    {
+      "ID": "2716",
+      "ENTITY_ID": "SOURCE",
+      "STATUS_ID": "40",
+      "NAME": "Сайт GLS",
+      "NAME_INIT": "",
+      "SORT": "1440",
+      "SYSTEM": "N",
+      "CATEGORY_ID": "0",
+      "COLOR": "#",
+      "SEMANTICS": null,
+      "DESCRIPTION": ""
+    }
+  ]
+}

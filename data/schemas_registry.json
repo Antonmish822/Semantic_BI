@@ -1,0 +1,8 @@
+[
+  {"pattern": "^deal/[^/]+/[^/]+\\.json$", "schema": "schemas/deal.json"},
+  {"pattern": "^activity/[^/]+/[^/]+\\.json$", "schema": "schemas/activity.json"},
+  {"pattern": "^user/[^/]+/[^/]+\\.json$", "schema": "schemas/user.json"},
+  {"pattern": "^stage/[^/]+/[^/]+\\.json$", "schema": "schemas/deal_stage.json"},
+  {"pattern": "^category/[^/]+/[^/]+\\.json$", "schema": "schemas/deal_category.json"},
+  {"pattern": "^source/[^/]+/[^/]+\\.json$", "schema": "schemas/source.json"}
+]

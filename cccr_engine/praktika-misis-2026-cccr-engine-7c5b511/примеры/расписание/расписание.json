@@ -1,0 +1,195 @@
+{
+    "version":"2.4",
+    "description":{
+        "context":{
+            "номерНедели":{
+                "compute":{
+                    "xquery":[
+                        "./file/@URI/data()",
+                        "substring-before(., '.xlsx')",
+                        "tokenize(., '-')[last()]"
+                    ]
+                }
+            },
+            "учебныйГод":{
+                "compute":{
+                    "xquery":[
+                        "./file/@URI/data()",
+                        "substring-before(., '.xlsx')",
+                        "tokenize(., '-')[last()-1]"
+                    ]
+                }
+            }
+        },
+        "properties":[
+            {
+                "QName":{
+                    "NameSpace":"http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                    "PrefixedName":"rdf:type"
+                },
+                "URI": "https://rdf.lipers24.ru/онтология/Расписание"
+            },
+            {
+                "context":{
+                    "predicates":{
+                        "compute":{
+                            "xquery":"./file/table[1]/row[position()>2]"
+                        }
+                    }
+                },
+                "QName":{
+                    "NameSpace":"https://rdf.lipers24.ru/schema/",
+                    "PrefixedName":"lipers24:наборУроковУчителя"
+                },
+                "description":{
+                    "context":{
+                        "id.alt":{
+                            "compute":{
+                                "xquery":"'https://rdf.lipers24.ru/ресурсы/учителя#' || random:uuid()"
+                            }
+                        },
+                        "id":{
+                            "compute":{
+                                "xquery":"./predicate/row/cell[@label='Учитель']/text()"
+                            }
+                        }
+                    },
+                    "about":{
+                        "compute":{
+                            "xquery": "Q{localFunct}about(., 'список-учителей-расписание')"
+                        }
+                    },
+                    "properties":[
+                        {
+                            "context":{
+                                "predicates":{
+                                    "compute":{
+                                        "xquery":"./predicate/row/cell[position()>2][replace(text(), '\\s', '')]"
+                                    }
+                                }
+                            },
+                            "QName":{
+                                "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                "PrefixedName":"lipers24:урок"
+                            },
+                            "description":{
+                                "about":{
+                                    "compute":{
+                                        "xquery": "'https://rdf.lipers24.ru/ресурсы/уроки#'||random:uuid()"
+                                    }
+                                },
+                                "properties":[
+                                    {
+                                        "QName":{
+                                            "NameSpace":"http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                                            "PrefixedName":"rdf:type"
+                                        },
+                                        "URI": "https://rdf.lipers24.ru/онтология/Урок"
+                                    },
+                                    {
+                                        "QName":{
+                                            "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                            "PrefixedName":"lipers24:фио"
+                                        },
+                                        "literal":{
+                                            "compute":{
+                                                "xquery":"./id/text()"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "QName":{
+                                            "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                            "PrefixedName":"lipers24:учебныйГод"
+                                        },
+                                        "literal":{
+                                            "compute":{
+                                                "xquery":"./учебныйГод/text()"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "QName":{
+                                            "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                            "PrefixedName":"lipers24:учебныйНомерНедели"
+                                        },
+                                        "literal":{
+                                            "compute":{
+                                                "xquery":"./номерНедели/text()"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "QName":{
+                                            "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                            "PrefixedName":"lipers24:номерДняНедели"
+                                        },
+                                        "literal":{
+                                            "compute":{
+                                                "xquery":"./predicate/cell/@label/tokenize(data(), '-')[1]"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "QName":{
+                                            "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                            "PrefixedName":"lipers24:номерУрока"
+                                        },
+                                        "literal":{
+                                            "compute":{
+                                                "xquery":"./predicate/cell/@label/tokenize(data(), '-')[2]"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "context":{
+                                            "predicates":{
+                                                "compute":{
+                                                    "xquery":[
+                                                        "./predicate/cell/tokenize(text(), ';')[1]",
+                                                        "for $i in tokenize(., ',') return <класс>{$i}</класс>"
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        "QName":{
+                                            "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                            "PrefixedName":"lipers24:класс"
+                                        },
+                                        "literal":{
+                                            "compute":{
+                                                "xquery":"./predicate/класс/text()"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "QName":{
+                                            "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                            "PrefixedName":"lipers24:подгруппа"
+                                        },
+                                        "literal":{
+                                            "compute":{
+                                                "xquery":"./predicate/cell/tokenize(text(), ';')[3]"
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "QName":{
+                                            "NameSpace":"https://rdf.lipers24.ru/schema/",
+                                            "PrefixedName":"lipers24:предмет"
+                                        },
+                                        "literal":{
+                                            "compute":{
+                                                "xquery":"./predicate/cell/tokenize(text(), ';')[2]"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

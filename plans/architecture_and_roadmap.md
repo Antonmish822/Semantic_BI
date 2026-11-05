@@ -28,7 +28,7 @@
    - **No-Code UI (опционально)**: пользовательский конструктор IF-THEN с трансляцией в SWRL/SPARQL.
 
 4. **Inference Layer** — логический вывод
-   - **GraphDB/Stardog + Reasoner**: Pellet/HermiT, вывод новых фактов, классификация, консистентность.
+   - **GraphDB (целевой выбор для MVP) + Reasoner**: Pellet/HermiT, вывод новых фактов, классификация, консистентность.
    - **Entity Resolution**: owl:sameAs для слияния сущностей из разных источников.
 
 5. **Web UI Layer** — собственный веб‑интерфейс платформы

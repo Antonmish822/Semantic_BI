@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.venv
+.venv-wheels
+.vscode
+.manifest_cache

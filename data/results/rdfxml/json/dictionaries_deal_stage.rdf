@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:code xmlns:ns0="https://example.org/bitrix24#">C58:UC_SYT75J</ns0:code>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:name xmlns:ns0="https://example.org/bitrix24#">Взят в работу</ns0:name>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:nameInitial xmlns:ns0="https://example.org/bitrix24#"></ns0:nameInitial>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:sort xmlns:ns0="https://example.org/bitrix24#">12</ns0:sort>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:system xmlns:ns0="https://example.org/bitrix24#">N</ns0:system>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:categoryCode xmlns:ns0="https://example.org/bitrix24#">58</ns0:categoryCode>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:color xmlns:ns0="https://example.org/bitrix24#">#ace9fb</ns0:color>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:semantics xmlns:ns0="https://example.org/bitrix24#"></ns0:semantics>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/stage/3034">
+    <ns0:description xmlns:ns0="https://example.org/bitrix24#"></ns0:description>
+  </rdf:Description>
+</rdf:RDF>

@@ -1,0 +1,175 @@
+{
+  "description": {
+    "context": {
+      "subject": {
+        "compute": {
+          "xquery": "/json/object"
+        }
+      }
+    },
+    "about": {
+      "compute": {
+        "xquery": "concat('https://example.org/bitrix24/deal/', ID/text())"
+      }
+    },
+    "properties": [
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:title"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "TITLE/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:createdAt"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "DATE_CREATE/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:modifiedAt"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "DATE_MODIFY/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:stageCode"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "STAGE_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:stageSemantic"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "STAGE_SEMANTIC_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:categoryCode"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "CATEGORY_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:sourceCode"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "SOURCE_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:beginDate"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "BEGINDATE/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:closeDate"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "CLOSEDATE/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:opportunity"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "OPPORTUNITY/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#decimal"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:currency"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "CURRENCY_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:assignedTo"
+        },
+        "URI": {
+          "compute": {
+            "xquery": "concat('https://example.org/bitrix24/user/', ASSIGNED_BY_ID/text())"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:company"
+        },
+        "URI": {
+          "compute": {
+            "xquery": "concat('https://example.org/bitrix24/company/', COMPANY_ID/text())"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:contact"
+        },
+        "URI": {
+          "compute": {
+            "xquery": "concat('https://example.org/bitrix24/contact/', CONTACT_ID/text())"
+          }
+        }
+      }
+    ]
+  }
+}

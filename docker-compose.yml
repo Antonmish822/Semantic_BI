@@ -1,0 +1,14 @@
+services:
+  fuseki:
+    image: stain/jena-fuseki:latest
+    container_name: cccr-fuseki
+    ports:
+      - "3030:3030"
+    environment:
+      - FUSEKI_DATASET=cccr
+      - FUSEKI_MEM=1
+      - ADMIN_PASSWORD=admin
+    # Для персистентного хранилища вместо FUSEKI_MEM используйте TDB2-конфиг и volume /fuseki
+    # volumes:
+    #   - ./data/fuseki:/fuseki
+    restart: unless-stopped

@@ -1,0 +1,106 @@
+{
+  "description": {
+    "context": {
+      "subject": {
+        "compute": {
+          "xquery": "/json/object/sources/item"
+        }
+      }
+    },
+    "about": {
+      "compute": {
+        "xquery": "concat('https://example.org/bitrix24/source/', ID/text())"
+      }
+    },
+    "properties": [
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:code"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "STATUS_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:name"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "NAME/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:nameInitial"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "NAME_INIT/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:sort"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "SORT/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:system"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "SYSTEM/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:categoryCode"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "CATEGORY_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:color"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "COLOR/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:description"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "DESCRIPTION/text()"
+          }
+        }
+      }
+    ]
+  }
+}

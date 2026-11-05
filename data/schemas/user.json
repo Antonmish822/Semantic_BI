@@ -1,0 +1,73 @@
+{
+  "description": {
+    "context": {
+      "subject": {
+        "compute": {
+          "xquery": "/json/object"
+        }
+      }
+    },
+    "about": {
+      "compute": {
+        "xquery": "concat('https://example.org/bitrix24/user/', ID/text())"
+      }
+    },
+    "properties": [
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:active"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "ACTIVE/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:firstName"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "NAME/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:lastName"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "LAST_NAME/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:fullName"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "concat(NAME/text(), ' ', LAST_NAME/text())"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:department"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "UF_DEPARTMENT/item/text()"
+          }
+        }
+      }
+    ]
+  }
+}

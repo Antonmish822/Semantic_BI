@@ -1,0 +1,120 @@
+{
+  "description": {
+    "about": "https://rdf.lipers24.ru/ресурсы/КУГ#2023-2024",
+    "properties": [
+      {
+        "QName": {
+          "NameSpace": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+          "PrefixedName": "rdf:type"
+        },
+        "URI": "https://rdf.lipers24.ru/онтология/КУГ"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://rdf.lipers24.ru/schema/",
+          "PrefixedName": "lipers24:дата"
+        },
+        "description": {
+          "context": {
+            "subject": {
+              "compute": {
+                "xquery": "/registry/row"
+              }
+            }
+          },
+          "about": {
+            "compute": {
+              "xquery": "concat('https://rdf.lipers24.ru/ресурсы/датыУчебногоГрафика#', ./cell[@label='Дата']/text())"
+            }
+          },
+          "properties": [
+            {
+              "QName": {
+                "NameSpace": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                "PrefixedName": "rdf:type"
+              },
+              "URI": "https://rdf.lipers24.ru/онтология/ДатаУчебногоГрафика"
+            },
+            {
+              "QName": {
+                "NameSpace": "https://rdf.lipers24.ru/schema/",
+                "PrefixedName": "lipers24:дата"
+              },
+              "literal": {
+                "compute": {
+                  "xquery": "./cell[@label='Дата']/text()"
+                }
+              }
+            },
+            {
+              "QName": {
+                "NameSpace": "https://rdf.lipers24.ru/schema/",
+                "PrefixedName": "lipers24:деньНедели"
+              },
+              "literal": {
+                "compute": {
+                  "xquery": "./cell[@label='День недели']/text()"
+                }
+              }
+            },
+            {
+              "QName": {
+                "NameSpace": "https://rdf.lipers24.ru/schema/",
+                "PrefixedName": "lipers24:номерДняНедели"
+              },
+              "literal": {
+                "compute": {
+                  "xquery": "switch (./cell[@label='День недели']/text()) case 'понедельник' return '1' case 'вторник' return '2' case 'среда' return '3' case 'четверг' return '4' case 'пятница' return '5' case 'суббота' return '6' case 'воскресенье' return '7' default return ''"
+                }
+              }
+            },
+            {
+              "QName": {
+                "NameSpace": "https://rdf.lipers24.ru/schema/",
+                "PrefixedName": "lipers24:календарныйНомерНедели"
+              },
+              "literal": {
+                "compute": {
+                  "xquery": "./cell[@label='Календарный номер недели']/text()"
+                }
+              }
+            },
+            {
+              "QName": {
+                "NameSpace": "https://rdf.lipers24.ru/schema/",
+                "PrefixedName": "lipers24:учебныйНомерНедели"
+              },
+              "literal": {
+                "compute": {
+                  "xquery": "./cell[@label='Учебный номер недели']/text()"
+                }
+              }
+            },
+            {
+              "QName": {
+                "NameSpace": "https://rdf.lipers24.ru/schema/",
+                "PrefixedName": "lipers24:период"
+              },
+              "literal": {
+                "compute": {
+                  "xquery": "./cell[@label='Период']/text()"
+                }
+              }
+            },
+            {
+              "QName": {
+                "NameSpace": "https://rdf.lipers24.ru/schema/",
+                "PrefixedName": "lipers24:учебныеДни"
+              },
+              "literal": {
+                "compute": {
+                  "xquery": "./cell[@label='Учебные дни']/text()"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "ID": "794034",
+  "OWNER_TYPE_ID": "2",
+  "OWNER_ID": "23260",
+  "TYPE_ID": "6",
+  "PROVIDER_ID": "CRM_TODO",
+  "SUBJECT": "Связаться с клиентом",
+  "RESPONSIBLE_ID": "7256",
+  "CREATED": "2026-10-26T13:36:26+03:00",
+  "START_TIME": "2026-10-27T10:00:00+03:00",
+  "END_TIME": "2026-10-27T10:00:00+03:00",
+  "DEADLINE": "2026-10-27T10:00:00+03:00",
+  "COMPLETED": "Y",
+  "DIRECTION": "0"
+}

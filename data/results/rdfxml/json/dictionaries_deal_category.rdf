@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="https://example.org/bitrix24/category/58">
+    <ns0:name xmlns:ns0="https://example.org/bitrix24#">GLS</ns0:name>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/category/58">
+    <ns0:createdAt xmlns:ns0="https://example.org/bitrix24#">2024-09-04T03:00:00+03:00</ns0:createdAt>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/category/58">
+    <ns0:sort xmlns:ns0="https://example.org/bitrix24#">400</ns0:sort>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/category/58">
+    <ns0:locked xmlns:ns0="https://example.org/bitrix24#">N</ns0:locked>
+  </rdf:Description>
+</rdf:RDF>

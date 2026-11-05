@@ -1,0 +1,18 @@
+s3:
+  bucket: "your-bucket"
+  service_account: "" # informational only
+  endpoint_url: "https://storage.yandexcloud.net"
+  region: "ru-central1"
+  key_id: "YOUR_S3_ACCESS_KEY_ID"
+  secret_key: "YOUR_S3_SECRET_ACCESS_KEY"
+  input_prefix: "incoming/"
+  manifests_prefix: "manifests/"
+  registry_key: "manifests/registry.json"
+
+fuseki:
+  url: "http://localhost:3030/your-dataset"
+  username: ""
+  password: ""
+  graph_namespace: "urn:cccr:"
+
+poll_interval_seconds: 60

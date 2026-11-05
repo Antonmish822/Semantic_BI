@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:title xmlns:ns0="https://example.org/bitrix24#">GLS ООО "ТПК ЭШЕЛОН"</ns0:title>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:createdAt xmlns:ns0="https://example.org/bitrix24#" rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-10-26T13:20:43+03:00</ns0:createdAt>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:modifiedAt xmlns:ns0="https://example.org/bitrix24#" rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2026-11-02T08:46:02+03:00</ns0:modifiedAt>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:stageCode xmlns:ns0="https://example.org/bitrix24#">C58:UC_SYT75J</ns0:stageCode>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:stageSemantic xmlns:ns0="https://example.org/bitrix24#">P</ns0:stageSemantic>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:categoryCode xmlns:ns0="https://example.org/bitrix24#">58</ns0:categoryCode>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:sourceCode xmlns:ns0="https://example.org/bitrix24#">40</ns0:sourceCode>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:beginDate xmlns:ns0="https://example.org/bitrix24#">2026-10-26T03:00:00+03:00</ns0:beginDate>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:closeDate xmlns:ns0="https://example.org/bitrix24#">2026-11-02T03:00:00+03:00</ns0:closeDate>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:opportunity xmlns:ns0="https://example.org/bitrix24#" rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">0.00000000</ns0:opportunity>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:currency xmlns:ns0="https://example.org/bitrix24#">RUB</ns0:currency>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:assignedTo xmlns:ns0="https://example.org/bitrix24#" rdf:resource="https://example.org/bitrix24/user/7256"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:company xmlns:ns0="https://example.org/bitrix24#" rdf:resource="https://example.org/bitrix24/company/27662"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://example.org/bitrix24/deal/23260">
+    <ns0:contact xmlns:ns0="https://example.org/bitrix24#" rdf:resource="https://example.org/bitrix24/contact/54082"/>
+  </rdf:Description>
+</rdf:RDF>
