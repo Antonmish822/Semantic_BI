@@ -3,7 +3,7 @@
     "context": {
       "subject": {
         "compute": {
-          "xquery": "/json/object/deal_categories/item"
+          "xquery": "/json/object/deal_categories/item | /json/object[ID]"
         }
       }
     },

@@ -1,0 +1,4 @@
+[submodule "cccr_pipeline"]
+	path = cccr_pipeline
+	url = ssh://ssh.sourcecraft.dev/praktika-misis-2026/cccr-framework.git
+	branch = feat/semantic-bi-s3-fuseki

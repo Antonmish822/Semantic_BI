@@ -3,13 +3,13 @@
     "context": {
       "subject": {
         "compute": {
-          "xquery": "/json/object/deal_stages/item"
+          "xquery": "/json/object/deal_stages/item | /json/object[STATUS_ID]"
         }
       }
     },
     "about": {
       "compute": {
-        "xquery": "concat('https://example.org/bitrix24/stage/', ID/text())"
+        "xquery": "if (ID) then concat('https://example.org/bitrix24/stage/', ID/text()) else concat('https://example.org/bitrix24/stage/', encode-for-uri(ENTITY_ID/text()), '/', encode-for-uri(STATUS_ID/text()))"
       }
     },
     "properties": [
