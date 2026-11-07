@@ -1,188 +1,80 @@
-# CCCR S3 → Fuseki pipeline
+# Bitrix24 S3 manifests → named Fuseki graphs
 
-Скрипт `cccr\_pipeline.py` раз в минуту опрашивает S3-хранилище, находит новые
-или изменившиеся файлы (XML/CSV), подбирает для каждого все подходящие
-манифесты CCCR, прогоняет файл через движок CCCR (библиотека `cccr\_py` из
-вашего архива) и заливает получившийся RDF-граф в Jena Fuseki.
+`cccr_pipeline.py` consumes the event contract from `bitrix24_s3_export`.
+It does not process arbitrary files found under `events/`: it applies the
+adopted complete snapshot first, then completed incremental run manifests.
 
-## 1\. Соберите и установите библиотеку CCCR (`cccr\_py`)
+## Graph identity and update behavior
 
-Это C++-библиотека с pybind11-обвязкой, её нужно собрать один раз на
-машине, где будет работать скрипт (Linux/WSL2). Ниже — краткая инструкция;
-подробности см. в README движка.
+Each CRM entity has one stable graph URI:
 
-### 1.1 Требования (Linux/WSL2)
+```text
+urn:bitrix24:entity:<portal>:<entity-type>:<sha256(entity_key)>
+```
 
-Минимум:
-- CMake ≥ 3.25
-- Компилятор с поддержкой C++23 (GCC/Clang)
-- Ninja
-- pkg-config
-- libxml2-dev
-- make
+For example, every version of the same deal in the same portal maps to the
+same graph. On each accepted `upsert`, CCCR builds RDF from the event payload
+and the loader replaces the complete named graph using Graph Store `PUT`.
+Several matching CCCR schemas are merged before that `PUT`.
 
-Рекомендуется дополнительно:
-- libpcre3-dev
-- libcurl4-openssl-dev
-- libicu-dev
+The loader verifies manifest references and event SHA-256 values. It waits for
+both `manifest.status == complete` and the incremental run's `status.json` to
+report `complete`. Successfully applied entity versions and run IDs are stored
+in a local SQLite checkpoint. Reprocessing after a crash is idempotent.
+The checkpoint includes a fingerprint of the mapping registry and schemas;
+changing a mapping reprojects current entities from their source events.
+An OS file lock prevents two loader processes from applying runs concurrently
+against the same checkpoint.
 
-Пример установки (Debian/Ubuntu):
+The local snapshot is authoritative for the configured entity types in
+`snapshot_reconcile_entity_types`. By default these are `deal`, `user`,
+`category`, `stage`, and `source`. Activities are excluded because the exporter
+snapshot contains only the recent 90-day window. Incremental backfills are
+ignored unless an explicit workflow is added for them.
+
+## Install and configure
+
+Build and install `cccr_py` from the bundled CCCR engine first. Then install
+the Python dependencies:
 
 ```bash
-sudo apt update
-sudo apt install -y \
-  build-essential cmake ninja-build pkg-config make \
-  libxml2-dev libpcre3-dev \
-  libcurl4-openssl-dev libicu-dev
+python -m pip install -r requirements.txt
 ```
 
-Опционально (системный Redland):
+Copy `config.example.yaml` to `config.yaml` and set the S3 bucket, portal,
+credentials, and Fuseki dataset URL. The mapping registry is local at
+`cccr_pipeline/manifests_registry.json`; its schema paths resolve under
+`../data` by default. Keep the SQLite checkpoint path stable between runs.
+Do not commit `config.yaml` or credentials.
+
+Run one cycle:
 
 ```bash
-sudo apt install -y libraptor2-dev librasqal3-dev librdf0-dev
+python cccr_pipeline.py --once
 ```
 
-### 1.2 Сборка движка и установка `cccr\_py`
+Run continuously (polling interval comes from the config):
 
 ```bash
-cd praktika-misis-2026-cccr-engine  # папка распакованного архива
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install .          # соберёт и установит модуль cccr\_py
-python -c "import cccr\_py; print(cccr\_py.__version__)"   # проверка
+python cccr_pipeline.py
 ```
 
-Скрипт `cccr\_pipeline.py` нужно запускать в этом же venv (или там, куда
-установлен `cccr\_py`). Если модуль не найден — скрипт сразу завершится с
-понятным сообщением об ошибке.
+The S3 reader needs list/get access to the configured portal prefix. Fuseki
+needs Graph Store `PUT` and `DELETE` access. Use a persistent Fuseki dataset;
+the bundled Compose example uses in-memory storage and is only for local
+experimentation.
 
-## 2\. Установите остальные зависимости
+## Deletions and limits
 
-```bash
-pip install -r requirements.txt
-```
+Deleting an old version file from S3 does not delete the entity graph if a
+newer event for the same `entity_key` exists. A graph is deleted when the
+exporter publishes a `delete` event or when a new complete snapshot omits an
+entity type configured for authoritative reconciliation.
 
-## 3\. Настройте `config.yaml`
+The current exporter does not publish tombstones for records deleted directly
+in Bitrix24. That requires an exporter change or an agreed full reconciliation
+source. Do not interpret absence from an incremental manifest as deletion.
 
-Скопируйте `config.example.yaml` в `config.yaml` (в ту же папку, где лежит
-`cccr\_pipeline.py`) и заполните:
-
-* `s3.bucket`, `s3.key\_id`, `s3.secret\_key` — доступ к S3 (для Yandex
-  Object Storage `endpoint\_url` уже проставлен по умолчанию; для другого
-  S3-совместимого хранилища поменяйте `endpoint\_url`/`region`).
-* `s3.input\_prefix` — папка(-и) с входящими файлами.
-* `s3.manifests\_prefix` — папка с манифестами CCCR и всем, что они
-  подключают через `include` (см. ниже).
-* `s3.registry\_key` — ключ файла-реестра манифестов (см. п. 4).
-* `fuseki.url`, `fuseki.username`, `fuseki.password` — доступ к датасету
-  Jena Fuseki (`url` — адрес датасета, например
-  `http://host:3030/my-dataset`, **без** `/data` на конце).
-* `poll\_interval\_seconds` — интервал опроса (по умолчанию 60).
-
-## 4\. Формат реестра манифестов
-
-CCCR сам по себе не хранит информацию "какой манифест к какому имени файла
-подходит" — эту связку должен явно задавать реестр манифестов: JSON- или
-YAML-файл, лежащий в S3 по ключу `s3.registry\_key` (по умолчанию
-`manifests/registry.json`), внутри папки `s3.manifests\_prefix`.
-
-Формат — список объектов (пример — `manifests\_registry.example.json`):
-
-```json
-\[
-  {
-    "manifest": "kug/schema.json",
-    "pattern": "^KUG-\\\\d{4}-\\\\d{4}\\\\.(csv|xml)$",
-    "match": "fullmatch",
-    "flags": "i"
-  }
-]
-```
-
-Поля:
-
-* `manifest` — путь к JSON-схеме манифеста **относительно**
-  `s3.manifests\_prefix` (например `kug/schema.json` = ключ
-  `manifests/kug/schema.json` в S3). Файлы, на которые манифест ссылается
-  через `include`, должны лежать рядом с ним в S3 с сохранением
-  относительной структуры папок — скрипт зеркалирует всю папку
-  `manifests\_prefix` локально и передаёт эту папку в качестве
-  `include\_base`.
-* `pattern` — регулярное выражение (синтаксис Python `re`), которое
-  проверяется против **имени файла** (без пути), например
-  `KUG-2023-2024.csv`.
-* `match` — как применять `pattern`: `search` (по умолчанию, ищет
-  совпадение в любом месте строки), `match` (с начала строки) или
-  `fullmatch` (всё имя файла целиком).
-* `flags` — необязательно, буквы `i`/`m`/`s` (`re.IGNORECASE` /
-  `re.MULTILINE` / `re.DOTALL`).
-
-Если под один файл подходит несколько записей реестра (несколько разных
-регулярных выражений совпали) — применяются **все** подходящие манифесты,
-и для каждого из них в Fuseki заливается отдельный результат.
-
-Если ни один манифест не подошёл — в лог пишется предупреждение, файл
-запоминается как необработанный и на следующем опросе (через минуту)
-попытка повторяется автоматически — как и требовалось. Это же происходит,
-если манифест найден, но обработка завершилась с ошибкой (например,
-файл повреждён, или манифест ссылается на несуществующий `include`) —
-такой файл/манифест тоже будет повторён на следующем цикле, при этом уже
-успешно применённые к этому файлу манифесты повторно не запускаются.
-
-## 5\. Именование результатов и хранение в Fuseki
-
-Fuseki хранит триплеты, а не "файлы" в привычном смысле, поэтому
-результат каждой пары (файл, манифест) заливается как отдельный
-**именованный граф** через Graph Store HTTP Protocol
-(`PUT <fuseki.url>/data?graph=...`), с URI графа:
-
-```
-<fuseki.graph\_namespace><ИМЯ\_ФАЙЛА\_БЕЗ\_РАСШИРЕНИЯ>\_<ИМЯ\_МАНИФЕСТА>
-```
-
-Например, файл `KUG-2023-2024.csv`, обработанный манифестом
-`manifests/kug/schema.json`, попадёт в граф
-`urn:cccr:KUG-2023-2024\_schema` (имя манифеста берётся как basename без
-расширения — если хотите более говорящее имя, назовите файл манифеста
-осмысленно, например `manifests/kug/kug.json` → `...\_kug`).
-
-## 6\. Запуск
-
-```bash
-python3 cccr\_pipeline.py
-```
-
-Скрипт работает в бесконечном цикле, логирует происходящее в stdout,
-хранит состояние обработки (какие файлы/манифесты уже применены) в
-`state.json` рядом со скриптом — это позволяет безопасно перезапускать
-скрипт без повторной обработки уже загруженных данных. Остановка —
-`Ctrl+C` или `SIGTERM`.
-
-Локальный кэш скачанных манифестов лежит в `.manifests\_cache/` рядом со
-скриптом и синхронизируется с S3 на каждом цикле опроса (перекачивается
-только то, что изменилось, по ETag).
-
-## 7\. Быстрый старт Jena Fuseki (Docker Compose)
-
-Для локального стенда можно поднять Fuseki через [docker-compose.yml](../docker-compose.yml):
-
-```bash
-# запустить Fuseki на http://localhost:3030/cccr (in‑memory dataset)
-docker compose up -d fuseki
-```
-
-После запуска укажите в `fuseki.url` значение `http://localhost:3030/cccr` в вашем `config.yaml`.
-Учётные данные администратора по умолчанию: `admin` / `admin` (см. compose‑файл). Не используйте их в проде.
-
-## 8\. Запуск в WSL общим venv
-
-В репозитории добавлен скрипт [run.sh](./run.sh), который активирует общий venv в корне
-репозитория и запускает конвейер. Используйте его из WSL:
-
-```bash
-bash cccr_pipeline/run.sh
-```
-
-Скрипт автоматически установит зависимости из [requirements.txt](./requirements.txt) и проверит наличие
-[config.yaml](./config.example.yaml). Модуль `cccr_py` должен быть заранее установлен в этот же venv.
+Changing the graph URI scheme does not automatically remove graphs created by
+the previous loader. Before cutover, load and reconcile the new snapshot, then
+remove old `urn:cccr:*` graphs using a reviewed, namespace-scoped cleanup.

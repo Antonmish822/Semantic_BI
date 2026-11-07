@@ -1,18 +1,32 @@
 s3:
   bucket: "your-bucket"
-  service_account: "" # informational only
+  portal_id: "garpix-bitrix24-ru"
   endpoint_url: "https://storage.yandexcloud.net"
   region: "ru-central1"
-  key_id: "YOUR_S3_ACCESS_KEY_ID"
+  access_key: "YOUR_S3_ACCESS_KEY_ID"
   secret_key: "YOUR_S3_SECRET_ACCESS_KEY"
-  input_prefix: "incoming/"
-  manifests_prefix: "manifests/"
-  registry_key: "manifests/registry.json"
+
+mapping:
+  # Relative to this config file. Registry and CCCR schemas are versioned locally.
+  registry_path: "manifests_registry.json"
+  schemas_root: "../data"
+
+checkpoint:
+  path: "state.sqlite3"
 
 fuseki:
   url: "http://localhost:3030/your-dataset"
   username: ""
   password: ""
-  graph_namespace: "urn:cccr:"
+  graph_namespace: "urn:bitrix24:entity"
+
+# The local snapshot is authoritative for these complete entities.
+# Activities are deliberately excluded because exporter snapshots cover only 90 days.
+snapshot_reconcile_entity_types:
+  - deal
+  - user
+  - category
+  - stage
+  - source
 
 poll_interval_seconds: 60

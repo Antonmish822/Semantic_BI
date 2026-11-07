@@ -1,6 +1,10 @@
 # Local credentials and runtime state
 config.yaml
 state.json
+state.sqlite3
+state.sqlite3-shm
+state.sqlite3-wal
+state.sqlite3.lock
 .manifests_cache/
 
 # Python environments and generated files
