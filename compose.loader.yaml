@@ -7,8 +7,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     init: true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    networks:
+      - fuseki
     secrets:
       - loader_config
     volumes:
@@ -18,3 +18,7 @@ secrets:
     file: ./cccr_pipeline/config.yaml
 volumes:
   loader_state:
+networks:
+  fuseki:
+    external: true
+    name: fuseki_default

@@ -222,3 +222,5 @@ __marimo__/
 .venv-wheels
 .vscode
 .manifest_cache
+# Local S3 reader credentials
+*.env.rdf-reader
