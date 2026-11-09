@@ -227,3 +227,10 @@ __marimo__/
 
 # Former submodule is retained locally for comparison, not used by runtime/build.
 /cccr_pipeline/
+
+# Local auxiliary components excluded from this repository snapshot
+/raw_ingest/
+/examples/dev/
+/fuseki_dashboard/
+/build_rdfxml.py
+/fuseki_named_graphs.txt
