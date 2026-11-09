@@ -45,7 +45,35 @@ cp deploy/loader/config.example.yaml deploy/loader/config.yaml
 
 Заполните в `deploy/loader/config.yaml` S3 bucket и ключи, выбранный backend и адрес хранилища. Для Fuseki `fuseki.url` задаётся как адрес dataset без `/data`; для GraphDB задайте `graphdb.url` как адрес сервера без `/repositories` и имя `graphdb.repository`. Пути `/app/mappings/bitrix24/...` подходят для контейнера; для локального запуска замените их на пути checkout, задайте адрес RDF-хранилища, доступный с хоста, и отдельный локальный `checkpoint.path`. Для GraphDB используйте отдельный checkpoint и том. Не добавляйте в Git конфигурацию с секретами или файлы SQLite.
 
-### 4. Проверить один цикл
+### 4. Локально собрать и запустить Docker-образ
+
+Вариант ниже сам собирает `cccr_engine` в составе образа. Отдельно собирать wheel через `scripts/build_cccr.sh` не требуется. Нужен Docker с поддержкой Linux-контейнеров; на Windows и macOS используйте Docker Desktop. Сборка запускается из корня репозитория, где доступен submodule `cccr_engine`.
+
+Сначала создайте конфигурацию и заполните её доступами к S3 и настройками Fuseki или GraphDB.
+
+Linux и macOS (терминал):
+
+```bash
+cp deploy/loader/config.example.yaml deploy/loader/config.yaml
+docker build --platform linux/amd64 \
+  -f deploy/loader/Dockerfile \
+  -t semantic-bi-loader:local .
+docker compose -f deploy/loader/compose.yaml run --rm loader --once
+```
+
+Windows (PowerShell, Docker Desktop в режиме Linux containers):
+
+```powershell
+Copy-Item deploy/loader/config.example.yaml deploy/loader/config.yaml
+docker build --platform linux/amd64 `
+  -f deploy/loader/Dockerfile `
+  -t semantic-bi-loader:local .
+docker compose -f deploy/loader/compose.yaml run --rm loader --once
+```
+
+На компьютерах с ARM-процессором параметр `--platform linux/amd64` собирает образ для amd64; Docker Desktop может использовать эмуляцию, поэтому сборка будет медленнее. В конфигурации должны быть доступны реальные S3 и RDF-хранилище. Compose берёт конфигурацию из `deploy/loader/config.yaml` и сохраняет checkpoint в томе `loader_state`.
+
+### 5. Проверить один цикл
 
 Локально:
 
@@ -63,7 +91,7 @@ docker compose -f deploy/loader/compose.yaml run --rm loader \
   --config /run/secrets/loader_config --once
 ```
 
-### 5. Запустить регулярную обработку
+### 6. Запустить регулярную обработку
 
 ```bash
 docker compose -f deploy/loader/compose.yaml up -d --build
