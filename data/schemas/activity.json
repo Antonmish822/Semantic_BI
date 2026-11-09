@@ -133,6 +133,51 @@
             "xquery": "concat('https://example.org/bitrix24/user/', RESPONSIBLE_ID/text())"
           }
         }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:providerTypeId"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "PROVIDER_TYPE_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:modifiedAt"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "LAST_UPDATED/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:ownerTypeId"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "OWNER_TYPE_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:priority"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "PRIORITY/text()"
+          }
+        }
       }
     ]
   }

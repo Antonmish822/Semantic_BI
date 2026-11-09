@@ -17,3 +17,9 @@ git clone --recurse-submodules <URL-Semantic_BI>
 Для доступа к вложенным репозиториям SourceCraft нужны права чтения по SSH. В CI настройте GitHub Actions secret `SOURCECRAFT_SSH_KEY` (read-only ключ) и repository variable `SOURCECRAFT_KNOWN_HOSTS` с заранее проверенной записью host key `ssh.sourcecraft.dev`.
 
 Описание контракта S3 и Fuseki см. в [RDF_INTEGRATION.md](RDF_INTEGRATION.md).
+
+Подробная логика первичной загрузки, обновления снимка, регулярной синхронизации,
+checkpoint и обработки ошибок описана в [документе о логике загрузки S3 → Fuseki](docs/S3_TO_FUSEKI_LOADING.md).
+
+Известные ограничения run ID и восстановления очереди, отложенные на следующий этап,
+собраны в [SYNC_RELIABILITY_BACKLOG.md](docs/SYNC_RELIABILITY_BACKLOG.md).

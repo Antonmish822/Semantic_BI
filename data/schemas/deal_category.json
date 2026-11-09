@@ -56,6 +56,17 @@
             "xquery": "IS_LOCKED/text()"
           }
         }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:isDefault"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "IS_DEFAULT/text()"
+          }
+        }
       }
     ]
   }

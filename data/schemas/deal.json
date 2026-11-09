@@ -169,6 +169,40 @@
             "xquery": "concat('https://example.org/bitrix24/contact/', CONTACT_ID/text())"
           }
         }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:isManualOpportunity"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "IS_MANUAL_OPPORTUNITY/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:lastActivityTime"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "LAST_ACTIVITY_TIME/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:lastActivityBy"
+        },
+        "URI": {
+          "compute": {
+            "xquery": "concat('https://example.org/bitrix24/user/', LAST_ACTIVITY_BY/text())"
+          }
+        }
       }
     ]
   }
