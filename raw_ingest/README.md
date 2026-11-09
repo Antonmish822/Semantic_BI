@@ -48,7 +48,7 @@ python -m bitrix_raw fetch-entity --entity deal --since 2024-01-01 --until 2024-
 - `activity` → `crm.activity.list`
 - `productrow` → `crm.item.productrow.list`
 
-Список можно расширять в [`raw_ingest/src/bitrix_raw/bitrix.py`](src/bitrix_raw/bitrix.py:1).
+Список можно расширять в [`src/bitrix_raw/bitrix.py`](src/bitrix_raw/bitrix.py#L1).
 
 ## Формат хранения в S3
 
@@ -62,4 +62,4 @@ raw/bitrix24/<entity>/YYYY-MM-DD/batch_<N>.json
 
 ## Пример .env
 
-См. файл [`.env.example`](.env.example:1).
+См. файл [`.env.example`](.env.example#L1).

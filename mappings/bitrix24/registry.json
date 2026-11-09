@@ -1,0 +1,38 @@
+[
+  {
+    "_comment": "Bitrix24 deal events (schema v3/v4 payload JSON)",
+    "manifest": "schemas/deal.json",
+    "pattern": "^deal/[^/]+/[^/]+\\.json$",
+    "match": "fullmatch"
+  },
+  {
+    "_comment": "Bitrix24 activity events (schema v3/v4 payload JSON)",
+    "manifest": "schemas/activity.json",
+    "pattern": "^activity/[^/]+/[^/]+\\.json$",
+    "match": "fullmatch"
+  },
+  {
+    "_comment": "Bitrix24 user events (schema v3/v4 payload JSON)",
+    "manifest": "schemas/user.json",
+    "pattern": "^user/[^/]+/[^/]+\\.json$",
+    "match": "fullmatch"
+  },
+  {
+    "_comment": "Bitrix24 stage dictionary (schema v3/v4 payload JSON)",
+    "manifest": "schemas/deal_stage.json",
+    "pattern": "^stage/[^/]+/[^/]+\\.json$",
+    "match": "fullmatch"
+  },
+  {
+    "_comment": "Bitrix24 category dictionary (schema v3/v4 payload JSON)",
+    "manifest": "schemas/deal_category.json",
+    "pattern": "^category/[^/]+/[^/]+\\.json$",
+    "match": "fullmatch"
+  },
+  {
+    "_comment": "Bitrix24 source dictionary (schema v3/v4 payload JSON)",
+    "manifest": "schemas/source.json",
+    "pattern": "^source/[^/]+/[^/]+\\.json$",
+    "match": "fullmatch"
+  }
+]

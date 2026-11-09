@@ -1,4 +1,4 @@
-# Требования к тестированию Semantic_BI S3 → Fuseki
+# Требования к тестированию Semantic_BI S3 → RDF-хранилище
 
 ## Цель
 
@@ -35,7 +35,7 @@
   разрешение путей схем внутри `schemas_root`, regex/match mode и fingerprint
   реестра/схем.
 
-### 2. Тесты применения к Fuseki
+### 2. Контракт Graph Store адаптеров
 
 Использовать fake HTTP transport и проверять HTTP-метод, dataset endpoint,
 query-параметр `graph`, заголовок `Content-Type`, тело и допустимые статус-коды.
@@ -108,20 +108,56 @@ query-параметр `graph`, заголовок `Content-Type`, тело и �
 
 ## Текущее состояние
 
-В `cccr_pipeline/tests/test_rdf_sync.py` подготовлен набор из 18 тест-кейсов
-(17 проходят в обычном окружении, один native CCCR тест пропускается без
-`cccr_py`). Используются шесть обезличенных payload-фикстур из snapshot для
-всех production mappings. Набор также покрывает преобразование JSON в XML,
-валидацию события, URI графа, CCCR mapping, `PUT`/`DELETE`, SHA,
-повтор/устаревшее событие, частичный run, snapshot reconciliation и SQLite
-lock/checkpoint. Запуск: `python -m unittest discover -s cccr_pipeline/tests -v`
-из корня `Semantic_BI`.
+Текущие проверки сценария и общего контракта Fuseki/GraphDB находятся в
+`tests/test_loader.py`; запуск: `python -m unittest discover -s tests -v`.
+Они используют обезличенные payload-фикстуры для шести production mappings,
+проверяют native CCCR, конфигурацию, URI графов, SHA-256, replay, сверку снимка,
+HTTP PUT/DELETE и изоляцию checkpoint. Исторические 18 тестов исходного
+синхронизатора остаются в сохранённом локально бывшем submodule только для
+сопоставления; сборка и runtime от него не зависят. 2026-11-09 набор запущен
+из project venv: 11 тестов прошли.
 
-Нативный тест при наличии `cccr_py` проверяет ожидаемые RDF subject/predicate/
-value для всех шести фикстур. Все 18 кейсов прошли с CCCR, собранным из исходников
-проекта и установленным как repaired wheel в окружение uv. `scripts/test.sh`
-обязательно импортирует CCCR до тестов, поэтому отсутствие native-модуля
-считается ошибкой release-проверки. Эти тесты пока не заменяют полный набор из разделов выше:
-нужен интеграционный прогон с настоящим `cccr_py`/Fuseki, отдельная проверка
-чтения S3-манифестов и границ статусов, а также CI-запуск. Тесты, поставляемые внутри вложенного submodule
-`cccr_pipeline/cccr_engine`, относятся к движку CCCR и не покрывают S3 → Fuseki интеграцию.
+Unit-тесты не подменяют операционную проверку с реальными сервисами.
+
+### Результаты изолированной проверки Fuseki — 2026-11-09
+
+Выполнена репетиция продолжения на полном SQLite checkpoint и согласованной
+копии полного Fuseki TDB2 dataset `Persistent` на `stain/jena-fuseki:4.8.0`.
+В тестовом S3 bucket были
+подготовлены два synthetic incremental run для новой сущности: upsert и
+последующий delete. Полный snapshot совпал с `base_manifest_key` checkpoint и
+повторно не применялся.
+
+- После upsert checkpoint перешёл на
+  `20261109T080000Z-rehearsal-upsert`; named graph присутствовал.
+- После delete checkpoint перешёл на
+  `20261109T081000Z-rehearsal-delete`; сущность отмечена удалённой, граф
+  отсутствовал.
+- Повторный запуск с тем же Fuseki dataset и checkpoint не создал операций;
+  cursor, число строк checkpoint и отсутствие графа сохранились.
+- Итоговый SQLite checkpoint прошёл `PRAGMA integrity_check` (`ok`).
+- Репетиционный Fuseki был остановлен; рабочие Fuseki и checkpoint не
+  изменялись.
+
+Подробный итог, SHA-256 checkpoint и журналы сохранены локально в
+`/tmp/fuseki-verification/full-checkpoint-rehearsal/` (`rehearsal-result.json`,
+`logs/`).
+
+Отдельный GraphDB прогон snapshot + два incremental runs и повторный запуск
+прошёл на GraphDB 10.8.14 со своим тестовым repository и checkpoint. Репетиция
+полного checkpoint на GraphDB пропущена по решению пользователя; результат
+Fuseki-репетиции не считается проверкой GraphDB.
+
+Все проверки готовности:
+
+| Критерий | Статус |
+| --- | --- |
+| Локальные unit/contract тесты | Пройдено: 11 тестов |
+| Реальная Fuseki проверка с полным checkpoint | Пройдено на изолированной копии |
+| Отдельный GraphDB snapshot/incremental/repeat прогон | Пройдено на GraphDB 10.8.14 |
+| Полная GraphDB checkpoint-репетиция | Пропущена по решению пользователя |
+| Чистая CI-сборка и workflow | Ожидается после загрузки ветки; итоги CI нужно добавить после завершения workflow |
+
+CI workflow получает закрытый submodule `cccr_engine` через `SOURCECRAFT_SSH_KEY`
+и `SOURCECRAFT_KNOWN_HOSTS`; пользователь подтвердил, что они настроены в
+репозитории. Локальная приёмка не включает публикацию или merge.

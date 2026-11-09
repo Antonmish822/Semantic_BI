@@ -224,3 +224,6 @@ __marimo__/
 .manifest_cache
 # Local S3 reader credentials
 *.env.rdf-reader
+
+# Former submodule is retained locally for comparison, not used by runtime/build.
+/cccr_pipeline/

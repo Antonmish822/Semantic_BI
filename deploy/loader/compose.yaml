@@ -1,0 +1,20 @@
+services:
+  loader:
+    image: semantic-bi-loader:${LOADER_TAG:-local}
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: deploy/loader/Dockerfile
+    restart: unless-stopped
+    init: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    secrets:
+      - loader_config
+    volumes:
+      - loader_state:/var/lib/semantic-bi
+secrets:
+  loader_config:
+    file: ./config.yaml
+volumes:
+  loader_state:

@@ -1,6 +1,11 @@
 # Архитектура и дорожная карта MVP
 
-Источник: [`docs/semantic_bi_mvp_pitch.pdf`](../docs/semantic_bi_mvp_pitch.pdf), [`docs/semantic_data_lake_architecture (1).pdf`](../docs/semantic_data_lake_architecture%20(1).pdf), [`docs/Архитектура Семантической BI-платформы.pdf`](../docs/%D0%90%D1%80%D1%85%D0%B8%D1%82%D0%B5%D0%BA%D1%82%D1%83%D1%80%D0%B0%20%D0%A1%D0%B5%D0%BC%D0%B0%D0%BD%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B9%20BI-%D0%BF%D0%BB%D0%B0%D1%82%D1%84%D0%BE%D1%80%D0%BC%D1%8B.pdf).
+Источник: [`docs/semantic_bi_mvp_pitch.pdf`](../semantic_bi_mvp_pitch.pdf), [`docs/semantic_data_lake_architecture (1).pdf`](../semantic_data_lake_architecture%20%281%29.pdf), [`docs/Архитектура Семантической BI-платформы.pdf`](../%D0%90%D1%80%D1%85%D0%B8%D1%82%D0%B5%D0%BA%D1%82%D1%83%D1%80%D0%B0%20%D0%A1%D0%B5%D0%BC%D0%B0%D0%BD%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B9%20BI-%D0%BF%D0%BB%D0%B0%D1%82%D1%84%D0%BE%D1%80%D0%BC%D1%8B.pdf).
+
+> Этот документ — стратегическая целевая архитектура, а не описание уже
+> развёрнутой платформы. Сейчас реализован S3→RDF-загрузчик Bitrix24 с
+> адаптерами Fuseki и GraphDB. Работа с GraphDB в загрузчике не означает, что
+> reasoner, правила вывода и весь целевой MVP уже развёрнуты.
 
 ## 1) Целевая архитектура MVP
 

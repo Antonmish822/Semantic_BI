@@ -7,21 +7,21 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Configure SourceCraft access for nested submodules
+      - name: Configure SourceCraft access for cccr_engine submodule
         env:
           SOURCECRAFT_SSH_KEY: ${{ secrets.SOURCECRAFT_SSH_KEY }}
           SOURCECRAFT_KNOWN_HOSTS: ${{ vars.SOURCECRAFT_KNOWN_HOSTS }}
         run: |
-          test -n "$SOURCECRAFT_SSH_KEY" || { echo "Set SOURCECRAFT_SSH_KEY to a read-only deploy key for cccr-framework and cccr-engine." >&2; exit 1; }
+          test -n "$SOURCECRAFT_SSH_KEY" || { echo "Set SOURCECRAFT_SSH_KEY to a read-only deploy key for cccr-engine." >&2; exit 1; }
           test -n "$SOURCECRAFT_KNOWN_HOSTS" || { echo "Set SOURCECRAFT_KNOWN_HOSTS to the verified ssh.sourcecraft.dev host key." >&2; exit 1; }
           install -m 700 -d "$HOME/.ssh"
           printf '%s\n' "$SOURCECRAFT_SSH_KEY" > "$HOME/.ssh/id_ed25519"
           chmod 600 "$HOME/.ssh/id_ed25519"
           printf '%s\n' "$SOURCECRAFT_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
           chmod 600 "$HOME/.ssh/known_hosts"
-          git submodule update --init --recursive
+          git submodule update --init cccr_engine
       - name: Build image and test repaired CCCR in clean runtime
-        run: docker build --platform linux/amd64 -f cccr_pipeline/Dockerfile -t semantic-bi-loader:ci cccr_pipeline
+        run: docker build --platform linux/amd64 -f deploy/loader/Dockerfile -t semantic-bi-loader:ci .
       - name: Check entrypoint
         run: docker run --rm semantic-bi-loader:ci --help
       - name: Export release image

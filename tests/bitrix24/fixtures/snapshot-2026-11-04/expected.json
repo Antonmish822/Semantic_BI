@@ -1,0 +1,32 @@
+{
+  "deal": {
+    "subject": "https://example.org/bitrix24/deal/900001",
+    "predicate": "title",
+    "value": "Fixture deal 900001"
+  },
+  "activity": {
+    "subject": "https://example.org/bitrix24/activity/900002",
+    "predicate": "subject",
+    "value": "Fixture activity"
+  },
+  "category": {
+    "subject": "https://example.org/bitrix24/category/901",
+    "predicate": "name",
+    "value": "Fixture category"
+  },
+  "stage": {
+    "subject": "https://example.org/bitrix24/stage/DEAL_STAGE_901/C901%3ANEW",
+    "predicate": "name",
+    "value": "Fixture stage"
+  },
+  "source": {
+    "subject": "https://example.org/bitrix24/source/SOURCE/2%7CFIXTURE_SOURCE",
+    "predicate": "name",
+    "value": "Fixture source"
+  },
+  "user": {
+    "subject": "https://example.org/bitrix24/user/900003",
+    "predicate": "fullName",
+    "value": "User Fixture"
+  }
+}

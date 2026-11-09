@@ -1,24 +1,2 @@
-services:
-  loader:
-    image: semantic-bi-loader:${LOADER_TAG:-local}
-    platform: linux/amd64
-    build:
-      context: ./cccr_pipeline
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    init: true
-    networks:
-      - fuseki
-    secrets:
-      - loader_config
-    volumes:
-      - loader_state:/var/lib/semantic-bi
-secrets:
-  loader_config:
-    file: ./cccr_pipeline/config.yaml
-volumes:
-  loader_state:
-networks:
-  fuseki:
-    external: true
-    name: fuseki_default
+include:
+  - path: deploy/loader/compose.yaml

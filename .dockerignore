@@ -1,0 +1,15 @@
+.git
+cccr_pipeline
+**/.venv*
+**/__pycache__
+**/.cache
+**/build
+**/bin
+**/dist
+**/config.yaml
+**/.env
+**/*.sqlite3*
+**/*.db
+**/*.log
+cccr_engine/SaxonCHE*
+cccr_engine/SaxonCCoreHE
