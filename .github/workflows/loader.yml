@@ -24,9 +24,3 @@ jobs:
         run: docker build --platform linux/amd64 -f deploy/loader/Dockerfile -t semantic-bi-loader:ci .
       - name: Check entrypoint
         run: docker run --rm semantic-bi-loader:ci --help
-      - name: Export release image
-        run: docker save semantic-bi-loader:ci | gzip > semantic-bi-loader.tar.gz
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: semantic-bi-loader-linux-amd64
-          path: semantic-bi-loader.tar.gz

@@ -62,13 +62,23 @@ export LOADER_UID="$(id -u)" LOADER_GID="$(id -g)"
 
 В этом checkout уже настроены `deploy/loader/config.yaml`, сеть Fuseki и внешний volume `semantic_bi_loader_state_migrated`. В volume помещён checkpoint ранее работавшей синхронизации. Не удаляйте volume и не заменяйте checkpoint пустым файлом при продолжении этой загрузки.
 
-Чтобы пересобрать образ из текущего checkout:
+Compose запускает опубликованные образы из закрытых GHCR packages. Войдите с PAT classic, у которого есть `read:packages` (токен вводится через stdin):
 
 ```bash
-docker compose -p semantic_bi -f deploy/loader/compose.yaml build loader
+read -rsp 'GitHub token: ' GHCR_TOKEN; echo
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+unset GHCR_TOKEN
 ```
 
-Сборка образа запускает проверки, указанные в Dockerfile.
+Для production закрепите SHA-версию, после чего загрузите её:
+
+```bash
+export LOADER_IMAGE_TAG=sha-<full-commit-sha>
+export MONITOR_IMAGE_TAG=sha-<full-commit-sha>
+docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
+```
+
+Если переменные не заданы, используется последний образ ветки `feat/entity-key-fuseki-sync`. На целевой машине сборка из исходников не выполняется. CI собирает образ, включая CCCR native engine, и выполняет проверки из Dockerfile.
 
 ## Выполнить один цикл
 
@@ -128,6 +138,8 @@ export LOADER_UID="$(id -u)" LOADER_GID="$(id -g)"
 docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d
 docker compose -p semantic_bi -f deploy/loader/compose.yaml logs -f loader
 ```
+
+Для обновления только загрузчика сначала задайте новый `LOADER_IMAGE_TAG`, затем выполните `pull loader` и `up -d --no-deps loader`. Checkpoint сохранится во внешнем томе. Откат выполняется аналогично с предыдущим SHA-тегом.
 
 `logs -f` только показывает журнал и следит за новыми строками. Нажатие `Ctrl+C` останавливает просмотр, контейнер остаётся работать в фоне.
 

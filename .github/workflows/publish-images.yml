@@ -1,0 +1,70 @@
+name: Publish container images
+
+on:
+  push:
+    branches: [main, feat/entity-key-fuseki-sync]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Configure SourceCraft access for cccr_engine submodule
+        env:
+          SOURCECRAFT_SSH_KEY: ${{ secrets.SOURCECRAFT_SSH_KEY }}
+          SOURCECRAFT_KNOWN_HOSTS: ${{ vars.SOURCECRAFT_KNOWN_HOSTS }}
+        run: |
+          test -n "$SOURCECRAFT_SSH_KEY" || { echo "SOURCECRAFT_SSH_KEY is required for cccr_engine." >&2; exit 1; }
+          test -n "$SOURCECRAFT_KNOWN_HOSTS" || { echo "SOURCECRAFT_KNOWN_HOSTS is required for ssh.sourcecraft.dev." >&2; exit 1; }
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SOURCECRAFT_SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$SOURCECRAFT_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          git submodule update --init cccr_engine
+
+      - name: Build and check loader image
+        run: |
+          docker build --platform linux/amd64 \
+            --label org.opencontainers.image.source=https://github.com/Antonmish822/Semantic_BI \
+            -f deploy/loader/Dockerfile -t semantic-bi-loader:ci .
+          docker run --rm semantic-bi-loader:ci --help
+
+      - name: Build monitor image
+        run: |
+          docker build --platform linux/amd64 \
+            --label org.opencontainers.image.source=https://github.com/Antonmish822/Semantic_BI \
+            -f deploy/monitor/Dockerfile -t semantic-bi-monitor:ci .
+
+      - name: Log in to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+
+      - name: Tag and publish images
+        shell: bash
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          tags=("sha-${GITHUB_SHA}")
+          if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
+            branch_tag="${GITHUB_REF_NAME//\//-}"
+            tags+=("branch-${branch_tag}")
+          elif [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tags+=("${GITHUB_REF_NAME}")
+          fi
+          for component in loader monitor; do
+            image="ghcr.io/${owner}/semantic-bi-${component}"
+            for tag in "${tags[@]}"; do
+              docker tag "semantic-bi-${component}:ci" "${image}:${tag}"
+              docker push "${image}:${tag}"
+            done
+          done

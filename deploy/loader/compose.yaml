@@ -1,10 +1,7 @@
 services:
   loader:
-    image: semantic-bi-loader:${LOADER_TAG:-local}
+    image: ghcr.io/antonmish822/semantic-bi-loader:${LOADER_IMAGE_TAG:-branch-feat-entity-key-fuseki-sync}
     platform: linux/amd64
-    build:
-      context: ../..
-      dockerfile: deploy/loader/Dockerfile
     # File-backed Compose secrets keep host ownership/mode; run as the host
     # user so a 0600 local config remains readable without broadening access.
     user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
@@ -18,10 +15,8 @@ services:
       - default
       - fuseki
   monitor:
-    image: semantic-bi-monitor:${LOADER_TAG:-local}
-    build:
-      context: ../..
-      dockerfile: deploy/monitor/Dockerfile
+    image: ghcr.io/antonmish822/semantic-bi-monitor:${MONITOR_IMAGE_TAG:-branch-feat-entity-key-fuseki-sync}
+    platform: linux/amd64
     user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
     restart: unless-stopped
     read_only: true

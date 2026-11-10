@@ -22,6 +22,8 @@ Semantic_BI загружает данные Bitrix24 из S3 в RDF-хранил
 
 ## Развёртывание
 
+Имена GHCR-образов, правила публикации и закрепления версий описаны в [контракте контейнерных образов](docs/CONTAINER_IMAGE_CONTRACT.md). GitHub Actions публикует loader и monitor; на сервере остаётся только скачать и запустить готовые образы.
+
 ### 1. Получить проект и зависимости
 
 ```bash
@@ -47,33 +49,27 @@ cp deploy/loader/config.example.yaml deploy/loader/config.yaml
 
 Заполните в `deploy/loader/config.yaml` S3 bucket и ключи, выбранный backend и адрес хранилища. Для Fuseki `fuseki.url` задаётся как адрес dataset без `/data`; для GraphDB задайте `graphdb.url` как адрес сервера без `/repositories` и имя `graphdb.repository`. Пути `/app/mappings/bitrix24/...` подходят для контейнера; для локального запуска замените их на пути checkout, задайте адрес RDF-хранилища, доступный с хоста, и отдельный локальный `checkpoint.path`. Для GraphDB используйте отдельный checkpoint и том. Не добавляйте в Git конфигурацию с секретами или файлы SQLite.
 
-### 4. Локально собрать и запустить Docker-образ
+### 4. Получить опубликованные образы
 
-Вариант ниже сам собирает `cccr_engine` в составе образа. Отдельно собирать wheel через `scripts/build_cccr.sh` не требуется. Нужен Docker с поддержкой Linux-контейнеров; на Windows и macOS используйте Docker Desktop. Сборка запускается из корня репозитория, где доступен submodule `cccr_engine`.
-
-Сначала создайте конфигурацию и заполните её доступами к S3 и настройками Fuseki или GraphDB.
-
-Linux и macOS (терминал):
+CI собирает loader вместе с native `cccr_engine` и monitor, затем публикует их в GHCR для Linux/amd64. На целевой машине исходники и компилятор не нужны. Для закрытых GHCR packages войдите с токеном `read:packages`:
 
 ```bash
-cp deploy/loader/config.example.yaml deploy/loader/config.yaml
-docker build --platform linux/amd64 \
-  -f deploy/loader/Dockerfile \
-  -t semantic-bi-loader:local .
-docker compose -f deploy/loader/compose.yaml run --rm loader --once
+read -rsp 'GitHub token: ' GHCR_TOKEN; echo
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+unset GHCR_TOKEN
 ```
 
-Windows (PowerShell, Docker Desktop в режиме Linux containers):
+Используйте GitHub Personal Access Token (classic) с правом `read:packages`. `read -s` скрывает ввод токена; не передавайте токен аргументом команды и не сохраняйте его в конфигурации проекта.
 
-```powershell
-Copy-Item deploy/loader/config.example.yaml deploy/loader/config.yaml
-docker build --platform linux/amd64 `
-  -f deploy/loader/Dockerfile `
-  -t semantic-bi-loader:local .
-docker compose -f deploy/loader/compose.yaml run --rm loader --once
+Для production задайте одинаковый immutable SHA tag для обоих образов:
+
+```bash
+export LOADER_IMAGE_TAG=sha-<full-commit-sha>
+export MONITOR_IMAGE_TAG=sha-<full-commit-sha>
+docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 ```
 
-На компьютерах с ARM-процессором параметр `--platform linux/amd64` собирает образ для amd64; Docker Desktop может использовать эмуляцию, поэтому сборка будет медленнее. В конфигурации должны быть доступны реальные S3 и RDF-хранилище. Compose берёт конфигурацию из `deploy/loader/config.yaml` и сохраняет checkpoint в томе `loader_state`.
+Для быстрой проверки ветки переменные можно не задавать: по умолчанию используется подвижный `branch-feat-entity-key-fuseki-sync`. Конфигурация с credentials остаётся в `deploy/loader/config.yaml`, отдельно от образа; checkpoint хранится в постоянном volume.
 
 ### 5. Проверить один цикл
 
@@ -84,11 +80,10 @@ uv run python -m pipelines.bitrix24.cli \
   --config deploy/loader/config.yaml --once
 ```
 
-В контейнере после сборки:
+В контейнере:
 
 ```bash
-docker build --platform linux/amd64 \
-  -f deploy/loader/Dockerfile -t semantic-bi-loader:local .
+export LOADER_UID="$(id -u)" LOADER_GID="$(id -g)"
 docker compose -f deploy/loader/compose.yaml run --rm loader \
   --config /run/secrets/loader_config --once
 ```
@@ -96,9 +91,18 @@ docker compose -f deploy/loader/compose.yaml run --rm loader \
 ### 6. Запустить регулярную обработку
 
 ```bash
-docker compose -f deploy/loader/compose.yaml up -d --build
+docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d
 docker compose -f deploy/loader/compose.yaml logs -f loader
 ```
+
+После выбора нового SHA-тега скачайте образы и пересоздайте нужные сервисы. Checkpoint остаётся в томе:
+
+```bash
+docker compose -p semantic_bi -f deploy/loader/compose.yaml pull loader
+docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d --no-deps loader
+```
+
+Чтобы обновить только монитор, используйте `pull monitor` и `up -d --no-deps monitor`. Откат выполняется выбором предыдущего `sha-...` для соответствующего `*_IMAGE_TAG` и повторным `pull`/`up -d`.
 
 Compose монтирует конфигурацию как secret и хранит checkpoint в постоянном томе `loader_state`. Для продолжения после перезапуска сохраняйте этот том и тот же dataset/repository. Перед переносом checkpoint проверяйте его на копии. Не запускайте одновременно два загрузчика с одним checkpoint. Старый checkpoint без `store_backend` принимается только для Fuseki и при первом старте привязывается к выбранному endpoint. Для GraphDB создайте отдельный checkpoint и выполните начальную загрузку из принятого полного snapshot. Смена backend сама по себе не переносит RDF-графы: перед переключением сверьте состав графов в целевом хранилище.
 
@@ -106,7 +110,7 @@ Compose монтирует конфигурацию как secret и храни�
 
 ```bash
 docker compose -p semantic-bi-graphdb \
-  -f deploy/loader/compose.yaml up -d --build
+  -f deploy/loader/compose.yaml up -d
 ```
 
 Используйте конфигурацию, в которой `backend: graphdb`, а `graphdb.repository` указывает на созданный repository.

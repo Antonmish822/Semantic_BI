@@ -1,5 +1,6 @@
 FROM ghcr.io/astral-sh/uv:0.9.10 AS uv
 FROM python:3.13-slim
+LABEL org.opencontainers.image.source="https://github.com/Antonmish822/Semantic_BI"
 
 COPY --from=uv /uv /usr/local/bin/uv
 WORKDIR /app

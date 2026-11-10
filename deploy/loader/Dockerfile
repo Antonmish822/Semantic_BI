@@ -27,6 +27,7 @@ FROM scratch AS native-artifacts
 COPY --from=builder /wheels /
 
 FROM python:3.13.9-slim-trixie@sha256:3f1ce1c415054488586812b63270daf89d97b4f23416e1288003816790eb08de AS runtime
+LABEL org.opencontainers.image.source="https://github.com/Antonmish822/Semantic_BI"
 ENV PATH="/opt/venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN useradd --uid 10001 --create-home loader && mkdir -p /var/lib/semantic-bi \
     && chown loader:loader /var/lib/semantic-bi
