@@ -1,6 +1,5 @@
 name: Loader runtime
 on:
-  push:
   pull_request:
 jobs:
   native-runtime:
