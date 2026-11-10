@@ -11,15 +11,16 @@
 | S3 → RDF loader | `ghcr.io/antonmish822/semantic-bi-loader` |
 | Fuseki monitor | `ghcr.io/antonmish822/semantic-bi-monitor` |
 
-Образы публикуются как Linux/amd64: текущий Compose loader уже задаёт `platform: linux/amd64`, а CCCR native engine собирается внутри образа. Мультиархитектурную публикацию можно добавить отдельно после подтверждения поддержки и проверки native зависимости на других платформах.
+Оба образа публикуются как `linux/amd64`; Compose закрепляет эту архитектуру. На Windows используйте Docker Desktop в режиме Linux containers с backend WSL 2. На macOS требуется Docker Desktop: Intel Mac запускает образ нативно, а Apple Silicon — через эмуляцию amd64, что может быть медленнее. Docker Desktop описывает [режим WSL 2](https://docs.docker.com/desktop/features/wsl/) и [эмуляцию платформ](https://docs.docker.com/build/building/multi-platform/).
+
+Нативный `linux/arm64` образ пока не заявлен: корневой `pyproject.toml` ограничивает окружение Linux `x86_64`, хотя некоторые зависимости CCCR имеют arm64-ассеты. Для нативного запуска на Apple Silicon потребуется отдельная проверка и изменение матрицы платформ, сборки `cccr_engine` и CI. Текущий amd64-образ можно использовать через эмуляцию.
 
 ## Теги
 
-- `sha-<полный-git-sha>` — неизменяемый идентификатор каждой опубликованной сборки. Это основной тег для развёртывания и отката.
-- `branch-<нормализованное-имя-ветки>` — удобный подвижный указатель на последнюю сборку ветки, например `branch-feat-entity-key-fuseki-sync`. Для закреплённого production-развёртывания не использовать.
-- `v<major>.<minor>.<patch>` — неизменяемый тег релиза, например `v1.2.0`.
+- `v<major>.<minor>.<patch>` — неизменяемый тег релиза, например `v1.2.0`; это рекомендуемый тег развёртывания.
+- `sha-<полный-git-sha>` — неизменяемый тег конкретного коммита, публикуемый вместе с релизом для точного отката.
 
-Подвижный `latest` не используется как версия развёртывания. Loader и monitor публикуются для одного commit и получают одинаковый SHA-тег, хотя остаются отдельными образами.
+Подвижные `latest` и branch-теги не публикуются. Loader и monitor публикуются только после push Git-тега `v*` и получают одинаковые version и SHA-теги, хотя остаются отдельными образами.
 
 ## Доступ и конфигурация
 
@@ -29,16 +30,16 @@ GHCR packages хранятся закрытыми. Workflow публикации
 
 ## Публикация и развёртывание
 
-1. Workflow получает закрытый `cccr_engine` через `SOURCECRAFT_SSH_KEY` и `SOURCECRAFT_KNOWN_HOSTS`, собирает оба образа и публикует их при push в `main`, `feat/entity-key-fuseki-sync` и при push релизного тега `v*`. Можно запустить workflow вручную через GitHub Actions.
-2. `deploy/loader/compose.yaml` использует `LOADER_IMAGE_TAG` и `MONITOR_IMAGE_TAG`. Без переменных применяется подвижный тег `branch-feat-entity-key-fuseki-sync`; для рабочего закреплённого развёртывания задавайте `sha-<полный-git-sha>`.
+1. Workflow получает закрытый `cccr_engine` через `SOURCECRAFT_SSH_KEY` и `SOURCECRAFT_KNOWN_HOSTS`, собирает оба образа и публикует их только при push Git-тега `v*`. Push в ветки может запустить CI-проверки, но не публикует образы.
+2. `deploy/loader/compose.yaml` требует явные `LOADER_IMAGE_TAG` и `MONITOR_IMAGE_TAG`. Укажите один и тот же release tag (`v1.2.0`) либо SHA tag (`sha-<полный-git-sha>`); Compose не подставляет устаревающий branch tag.
 3. Для скачивания закрытых пакетов войдите командой `docker login ghcr.io`, затем выполните `docker compose pull` и `docker compose up -d`. Перезапуск загрузчика сохраняет checkpoint в отдельном внешнем volume.
 
 На целевом хосте можно выбрать фиксированную версию так:
 
 ```bash
-# Замените SHA-пример полным SHA нужного коммита.
-export LOADER_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
-export MONITOR_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
+export LOADER_IMAGE_TAG=v1.2.0
+export MONITOR_IMAGE_TAG=v1.2.0
+# Укажите существующий релизный тег, который был отправлен в Git.
 docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d
 ```

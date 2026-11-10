@@ -51,7 +51,7 @@ cp deploy/loader/config.example.yaml deploy/loader/config.yaml
 
 ### 4. Получить опубликованные образы
 
-CI собирает loader вместе с native `cccr_engine` и monitor, затем публикует их в GHCR для Linux/amd64. На целевой машине исходники и компилятор не нужны. Для закрытых GHCR packages войдите с токеном `read:packages`:
+CI собирает loader вместе с native `cccr_engine` и monitor, затем публикует образы `linux/amd64`. Они запускаются на Linux и в Docker Desktop на Windows/WSL2 и macOS; на Apple Silicon используется amd64-эмуляция. Нативный arm64 пока не поддержан. На целевой машине исходники и компилятор не нужны. Для закрытых GHCR packages войдите с токеном `read:packages`:
 
 ```bash
 read -rsp 'GitHub token: ' GHCR_TOKEN; echo
@@ -61,16 +61,15 @@ unset GHCR_TOKEN
 
 Используйте GitHub Personal Access Token (classic) с правом `read:packages`. `read -s` скрывает ввод токена; не передавайте токен аргументом команды и не сохраняйте его в конфигурации проекта.
 
-Для production задайте одинаковый immutable SHA tag для обоих образов. Подставьте полный SHA коммита вместо примера:
+Укажите существующий релизный Git-тег для обоих образов, например `v1.2.0`:
 
 ```bash
-export LOADER_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
-export MONITOR_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
-# Замените пример выше полным SHA нужного коммита.
+export LOADER_IMAGE_TAG=v1.2.0
+export MONITOR_IMAGE_TAG=v1.2.0
 docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 ```
 
-Для быстрой проверки ветки переменные можно не задавать: по умолчанию используется подвижный `branch-feat-entity-key-fuseki-sync`. Чтобы получить последнюю опубликованную версию этого тега, перед запуском выполните `docker compose -p semantic_bi -f deploy/loader/compose.yaml pull`. Compose сам не проверяет наличие новой версии тега при каждом `up`. Конфигурация с credentials остаётся в `deploy/loader/config.yaml`, отдельно от образа; checkpoint хранится в постоянном volume.
+Workflow публикует образы только при push Git-тега `v*`; push в ветки запускает проверки, но не публикацию. Для точного выбора можно вместо version tag указать `sha-<полный-git-sha>`. Compose требует явно задать обе переменные и не использует подвижные branch-теги. Выполняйте `pull` перед первым запуском и после смены тега. Конфигурация с credentials остаётся в `deploy/loader/config.yaml`, отдельно от образа; checkpoint хранится в постоянном volume.
 
 ### 5. Проверить один цикл
 

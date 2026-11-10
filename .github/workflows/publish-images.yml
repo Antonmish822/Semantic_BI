@@ -2,9 +2,7 @@ name: Publish container images
 
 on:
   push:
-    branches: [main, feat/entity-key-fuseki-sync]
     tags: ["v*"]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -54,13 +52,7 @@ jobs:
         shell: bash
         run: |
           owner="${GITHUB_REPOSITORY_OWNER,,}"
-          tags=("sha-${GITHUB_SHA}")
-          if [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
-            branch_tag="${GITHUB_REF_NAME//\//-}"
-            tags+=("branch-${branch_tag}")
-          elif [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
-            tags+=("${GITHUB_REF_NAME}")
-          fi
+          tags=("${GITHUB_REF_NAME}" "sha-${GITHUB_SHA}")
           for component in loader monitor; do
             image="ghcr.io/${owner}/semantic-bi-${component}"
             for tag in "${tags[@]}"; do

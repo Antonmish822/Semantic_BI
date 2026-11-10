@@ -59,6 +59,8 @@ uv run --locked python server.py
 ```bash
 cd "/путь/к/bitrix24_dashboard/Semantic_BI"
 export LOADER_UID="$(id -u)" LOADER_GID="$(id -g)"
+export LOADER_IMAGE_TAG=v1.2.0
+export MONITOR_IMAGE_TAG=v1.2.0
 docker compose -p semantic_bi -f deploy/loader/compose.yaml pull monitor
 docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d --no-deps monitor
 ```

@@ -1,6 +1,6 @@
 services:
   loader:
-    image: ghcr.io/antonmish822/semantic-bi-loader:${LOADER_IMAGE_TAG:-branch-feat-entity-key-fuseki-sync}
+    image: "ghcr.io/antonmish822/semantic-bi-loader:${LOADER_IMAGE_TAG:?Set LOADER_IMAGE_TAG to a release or SHA tag}"
     platform: linux/amd64
     # File-backed Compose secrets keep host ownership/mode; run as the host
     # user so a 0600 local config remains readable without broadening access.
@@ -15,7 +15,7 @@ services:
       - default
       - fuseki
   monitor:
-    image: ghcr.io/antonmish822/semantic-bi-monitor:${MONITOR_IMAGE_TAG:-branch-feat-entity-key-fuseki-sync}
+    image: "ghcr.io/antonmish822/semantic-bi-monitor:${MONITOR_IMAGE_TAG:?Set MONITOR_IMAGE_TAG to a release or SHA tag}"
     platform: linux/amd64
     user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
     restart: unless-stopped

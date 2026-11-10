@@ -10,7 +10,7 @@
 cd "/путь/к/bitrix24_dashboard/Semantic_BI"
 ```
 
-Нужны доступ к S3, работающий Fuseki или GraphDB с нужным dataset/repository и настроенные CCCR mappings. Для локального запуска требуются `uv` версии `0.9.10` и полученный checkout `cccr_engine`. Если зависимости ещё не установлены:
+Нужны доступ к S3, работающий Fuseki или GraphDB с нужным dataset/repository и настроенные CCCR mappings. Для прямого локального запуска загрузчика поддерживается Linux `x86_64`, `uv` версии `0.9.10` и checkout `cccr_engine`. На Windows используйте Linux-контейнеры через Docker Desktop/WSL 2; на macOS — Docker Desktop. Текущий образ `linux/amd64` работает на Apple Silicon через эмуляцию, а нативный `linux/arm64` пока не поддержан из-за платформенного ограничения в корневом `pyproject.toml`. Если зависимости локального Linux окружения ещё не установлены:
 
 ```bash
 uv sync --locked
@@ -70,16 +70,16 @@ printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u ВАШ_GITHUB_ЛОГИН --p
 unset GHCR_TOKEN
 ```
 
-Для production закрепите SHA-версию, после чего загрузите её:
+Для production выберите версию релиза или точный SHA, после чего загрузите её:
 
 ```bash
-export LOADER_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
-export MONITOR_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
-# Замените пример выше полным SHA нужного коммита.
+export LOADER_IMAGE_TAG=v1.2.0
+export MONITOR_IMAGE_TAG=v1.2.0
+# Укажите существующий релизный тег, который был отправлен в Git.
 docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 ```
 
-Если переменные не заданы, Compose ссылается на подвижный тег `branch-feat-entity-key-fuseki-sync`. Чтобы получить последнюю опубликованную версию, перед запуском обязательно выполните `docker compose -p semantic_bi -f deploy/loader/compose.yaml pull`; `up` сам не обновляет локально имеющийся образ. На целевой машине сборка из исходников не выполняется. CI собирает образ, включая CCCR native engine, и выполняет проверки из Dockerfile.
+Укажите существующий release tag (например `v1.2.0`) либо `sha-<полный-git-sha>`. Compose требует задать обе переменные; подвижные branch-теги не публикуются. Перед запуском или сменой версии выполняйте `pull`, поскольку `up` сам не обновляет локально имеющийся образ. На целевой машине сборка из исходников не выполняется. CI собирает образ, включая CCCR native engine, и выполняет проверки из Dockerfile.
 
 ## Выполнить один цикл
 
