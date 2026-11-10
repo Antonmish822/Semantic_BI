@@ -1,9 +1,0 @@
-[project]
-name = "semantic-bi-fuseki-dashboard"
-version = "0.1.0"
-description = "Read-only dashboard for Bitrix24 named graphs in Fuseki"
-requires-python = ">=3.10"
-dependencies = ["boto3>=1.34,<2"]
-
-[tool.uv]
-package = false

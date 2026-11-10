@@ -8,6 +8,7 @@ cccr_pipeline
 **/dist
 **/config.yaml
 **/.env
+**/.env.*
 **/*.sqlite3*
 **/*.db
 **/*.log

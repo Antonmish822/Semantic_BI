@@ -2,9 +2,15 @@
 
 Semantic_BI загружает данные Bitrix24 из S3 в RDF-хранилище и предоставляет их в виде именованных графов для семантической аналитики. Проект преобразует JSON-события экспортёра через CCCR mappings и поддерживает два backend: Apache Jena Fuseki и GraphDB.
 
-Главный компонент — S3→RDF-загрузчик в `pipelines/bitrix24`. `raw_ingest` — отдельный коннектор для получения RAW-данных Bitrix24, а `fuseki_dashboard` — интерфейс чтения данных из Fuseki.
+Главный компонент — S3→RDF-загрузчик в `pipelines/bitrix24`. `raw_ingest` — отдельный коннектор для получения RAW-данных Bitrix24, а `rdf_store_monitor` — интерфейс чтения данных из выбранного RDF-хранилища (Fuseki или GraphDB).
 
-Требования среды и инструкции локального и контейнерного запуска монитора приведены в [README Semantic BI Monitor](fuseki_dashboard/README.md).
+Требования среды и инструкции локального и контейнерного запуска монитора приведены в [README RDF Store Monitor](rdf_store_monitor/README.md).
+
+Для параллельного переноса текущих именованных графов из Fuseki в GraphDB с отдельными загрузчиком, монитором и checkpoint см. [руководство GraphDB-миграции](docs/GRAPHDB_PARALLEL_MIGRATION.md).
+
+Пошаговая команда-инструкция для подготовки repository, экспорта, переноса checkpoint, запуска и проверки отдельной пары контейнеров находится в [инструкции настройки GraphDB-связки](docs/GRAPHDB_PARALLEL_SETUP_INSTRUCTIONS.md).
+
+Краткие правила работы ИИ-агента с GraphDB API собраны в [памятке GraphDB API](docs/GRAPHDB_AGENT_API_GUIDE.md).
 
 ## Что делает загрузчик
 

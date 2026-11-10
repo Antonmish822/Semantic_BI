@@ -225,6 +225,9 @@ __marimo__/
 # Local loader configuration and SQLite checkpoint
 /deploy/loader/config.local.yaml
 /deploy/loader/config.yaml
+/deploy/graphdb/config.yaml
+rdf_store_monitor/.env.graphdb
+docs/bitrix24_rdf_semantic_review.md
 *.sqlite3
 *.sqlite3-shm
 *.sqlite3-wal

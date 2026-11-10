@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only local dashboard for named graphs in Apache Jena Fuseki."""
+"""Read-only local dashboard for Bitrix24 sync and RDF-store status."""
 from __future__ import annotations
 
 import base64
@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote_plus, urlsplit
+from urllib.parse import quote, quote_plus, urlsplit
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent
@@ -47,13 +47,16 @@ def load_query(name: str, graph_prefix: str) -> str:
     return template.replace(marker, sparql_literal(graph_prefix))
 
 
-class FusekiClient:
-    def __init__(self) -> None:
-        self.base_url = os.environ.get("FUSEKI_URL", "http://127.0.0.1:3030/Persistent").rstrip("/")
-        self.username = os.environ.get("FUSEKI_USERNAME", "")
-        self.password = os.environ.get("FUSEKI_PASSWORD", "")
-        self.graph_prefix = os.environ.get("GRAPH_PREFIX", "urn:bitrix24:entity:")
-        self.timeout = float(os.environ.get("FUSEKI_TIMEOUT", "30"))
+class RDFStoreClient:
+    def __init__(self, backend: str, query_url: str, username: str, password: str,
+                 graph_prefix: str, timeout: float) -> None:
+        self.backend = backend
+        self.backend_name = {"fuseki": "Fuseki", "graphdb": "GraphDB"}[backend]
+        self.query_url = query_url
+        self.username = username
+        self.password = password
+        self.graph_prefix = graph_prefix
+        self.timeout = timeout
 
     def select(self, query: str) -> list[dict[str, dict[str, str]]]:
         body = ("query=" + quote_plus(query)).encode()
@@ -64,7 +67,7 @@ class FusekiClient:
         if self.username:
             token = base64.b64encode(f"{self.username}:{self.password}".encode()).decode("ascii")
             headers["Authorization"] = f"Basic {token}"
-        request = Request(self.base_url + "/query", data=body, headers=headers, method="POST")
+        request = Request(self.query_url, data=body, headers=headers, method="POST")
         with urlopen(request, timeout=self.timeout) as response:
             result = json.loads(response.read().decode("utf-8"))
         return result.get("results", {}).get("bindings", [])
@@ -90,6 +93,8 @@ class FusekiClient:
                 continue
             timeline.append({"date": row["day"]["value"], "graphs": count})
         return {
+            "backend": self.backend,
+            "backend_name": self.backend_name,
             "total_graphs": len(graph_rows),
             "dated_graphs": sum(item["graphs"] for item in timeline),
             "by_type": dict(sorted(counts.items(), key=lambda item: (-item[1], item[0]))),
@@ -103,7 +108,7 @@ class FusekiClient:
   VALUES (?kind ?marker) { ("deal" ":deal:") ("activity" ":activity:")
                            ("user" ":user:") ("category" ":category:")
                            ("stage" ":stage:") ("source" ":source:") }
-  GRAPH ?g {}
+  GRAPH ?g { ?s ?p ?o }
   FILTER(STRSTARTS(STR(?g), {{graph_prefix}}) && CONTAINS(STR(?g), ?marker))
 } GROUP BY ?kind"""
         query = query.replace("{{graph_prefix}}", sparql_literal(self.graph_prefix))
@@ -129,7 +134,47 @@ SELECT ?kind (MAX(?dt) AS ?latest) (COUNT(DISTINCT ?g) AS ?modifiedGraphs) WHERE
             if kind in types:
                 types[kind]["modified_graphs"] = int(row["modifiedGraphs"]["value"])
                 types[kind]["latest_modified_at"] = row.get("latest", {}).get("value")
-        return {"available": True, "types": types, "checked_at": datetime.now(timezone.utc).isoformat()}
+        return {"available": True, "backend": self.backend,
+                "backend_name": self.backend_name, "types": types,
+                "checked_at": datetime.now(timezone.utc).isoformat()}
+
+
+def create_store_client(environ: dict[str, str] | None = None) -> RDFStoreClient:
+    env = os.environ if environ is None else environ
+    backend = env.get("RDF_BACKEND", "fuseki").strip().lower()
+    if backend not in {"fuseki", "graphdb"}:
+        raise ValueError("RDF_BACKEND must be 'fuseki' or 'graphdb'")
+
+    if backend == "fuseki":
+        base_url = (env.get("RDF_URL") or env.get("FUSEKI_URL") or
+                    "http://127.0.0.1:3030/Persistent").rstrip("/")
+        query_url = base_url + "/query"
+        legacy_user, legacy_password = "FUSEKI_USERNAME", "FUSEKI_PASSWORD"
+        legacy_timeout = "FUSEKI_TIMEOUT"
+    else:
+        base_url = (env.get("RDF_URL") or env.get("GRAPHDB_URL") or
+                    "http://127.0.0.1:7200").rstrip("/")
+        repository = env.get("GRAPHDB_REPOSITORY", "").strip()
+        if not repository or "/" in repository:
+            raise ValueError("GRAPHDB_REPOSITORY must be a repository name")
+        query_url = f"{base_url}/repositories/{quote(repository, safe='')}"
+        legacy_user, legacy_password = "GRAPHDB_USERNAME", "GRAPHDB_PASSWORD"
+        legacy_timeout = "GRAPHDB_TIMEOUT"
+
+    parsed = urlsplit(base_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("RDF_URL must be an absolute HTTP(S) URL")
+    timeout = float(env.get("RDF_TIMEOUT") or env.get(legacy_timeout) or "30")
+    if timeout <= 0:
+        raise ValueError("RDF_TIMEOUT must be positive")
+    return RDFStoreClient(
+        backend=backend,
+        query_url=query_url,
+        username=env.get("RDF_USERNAME") or env.get(legacy_user, ""),
+        password=env.get("RDF_PASSWORD") or env.get(legacy_password, ""),
+        graph_prefix=env.get("GRAPH_PREFIX", "urn:bitrix24:entity:"),
+        timeout=timeout,
+    )
 
 
 def loader_status() -> dict[str, object]:
@@ -183,9 +228,15 @@ def exporter_status() -> dict[str, object]:
 
 
 def get_overview() -> dict[str, object]:
-    fuseki = FusekiClient()
+    store_client = create_store_client()
     started = time.monotonic()
-    store = fuseki.monitor_stats()
+    try:
+        store = store_client.monitor_stats()
+    except (HTTPError, URLError, TimeoutError, ValueError, KeyError, OSError) as exc:
+        store = {"available": False, "backend": store_client.backend,
+                 "backend_name": store_client.backend_name,
+                 "error": type(exc).__name__,
+                 "checked_at": datetime.now(timezone.utc).isoformat()}
     store["query_seconds"] = round(time.monotonic() - started, 3)
     sync = loader_status()
     exporter = exporter_status()
@@ -205,7 +256,7 @@ def get_stats() -> dict[str, object]:
         cached = CACHE.get("payload")
         if cached is not None and now - float(CACHE["at"]) < CACHE_SECONDS:
             return cached  # type: ignore[return-value]
-        payload = FusekiClient().stats()
+        payload = create_store_client().stats()
         CACHE["at"] = now
         CACHE["payload"] = payload
         return payload
@@ -223,17 +274,17 @@ class Handler(BaseHTTPRequestHandler):
                 body = json.dumps(get_stats(), ensure_ascii=False).encode("utf-8")
                 self._send(200, body, "application/json; charset=utf-8")
             except (HTTPError, URLError, TimeoutError, ValueError, KeyError, OSError) as exc:
-                # Do not return Fuseki error bodies or credentials to the browser.
-                message = "Fuseki недоступен или вернул ошибку запроса статистики"
+                # Do not return RDF-store error bodies or credentials to the browser.
+                message = "RDF-хранилище недоступно или отклонило SPARQL-запрос"
                 self._send(502, json.dumps({"error": message}, ensure_ascii=False).encode(), "application/json; charset=utf-8")
-                self.log_error("Fuseki stats query failed (%s)", type(exc).__name__)
+                self.log_error("RDF-store stats query failed (%s)", type(exc).__name__)
         elif path == "/api/status":
             try:
                 body = json.dumps(get_overview(), ensure_ascii=False).encode("utf-8")
                 self._send(200, body, "application/json; charset=utf-8")
             except (HTTPError, URLError, TimeoutError, ValueError, KeyError, OSError) as exc:
-                self._send(502, json.dumps({"error": "Ошибка чтения состояния Fuseki"}, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
-                self.log_error("Fuseki monitor query failed (%s)", type(exc).__name__)
+                self._send(502, json.dumps({"error": "Ошибка чтения состояния RDF-хранилища"}, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
+                self.log_error("RDF-store monitor query failed (%s)", type(exc).__name__)
         else:
             self._send(404, b"Not found", "text/plain; charset=utf-8")
 
@@ -267,7 +318,8 @@ def main() -> None:
     host = os.environ.get("DASHBOARD_HOST", "127.0.0.1")
     port = int(os.environ.get("DASHBOARD_PORT", "8080"))
     server = ThreadingHTTPServer((host, port), Handler)
-    print(f"Dashboard: http://{host}:{port} (read-only; Fuseki: {os.environ.get('FUSEKI_URL', 'http://127.0.0.1:3030/Persistent')})")
+    store = create_store_client()
+    print(f"Dashboard: http://{host}:{port} (read-only; RDF store: {store.backend_name})")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

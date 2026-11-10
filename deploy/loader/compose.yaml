@@ -13,7 +13,7 @@ services:
       - loader_state:/var/lib/semantic-bi
     networks:
       - default
-      - fuseki
+      - rdf_store
   monitor:
     image: "ghcr.io/antonmish822/semantic-bi-monitor:${MONITOR_IMAGE_TAG:?Set MONITOR_IMAGE_TAG to a release or SHA tag}"
     platform: linux/amd64
@@ -34,17 +34,17 @@ services:
       - "127.0.0.1:8080:8080"
     networks:
       - default
-      - fuseki
+      - rdf_store
 secrets:
   loader_config:
     file: ./config.yaml
   dashboard_env:
-    file: ../../fuseki_dashboard/.env
+    file: ../../rdf_store_monitor/.env
 volumes:
   loader_state:
     external: true
     name: semantic_bi_loader_state_migrated
 networks:
-  fuseki:
+  rdf_store:
     external: true
-    name: fuseki_default
+    name: ${RDF_DOCKER_NETWORK:-fuseki_default}

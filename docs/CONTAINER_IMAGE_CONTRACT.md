@@ -9,7 +9,7 @@
 | Компонент | Образ |
 |---|---|
 | S3 → RDF loader | `ghcr.io/antonmish822/semantic-bi-loader` |
-| Fuseki monitor | `ghcr.io/antonmish822/semantic-bi-monitor` |
+| RDF store monitor | `ghcr.io/antonmish822/semantic-bi-monitor` |
 
 Оба образа публикуются как `linux/amd64`; Compose закрепляет эту архитектуру. На Windows используйте Docker Desktop в режиме Linux containers с backend WSL 2. На macOS требуется Docker Desktop: Intel Mac запускает образ нативно, а Apple Silicon — через эмуляцию amd64, что может быть медленнее. Docker Desktop описывает [режим WSL 2](https://docs.docker.com/desktop/features/wsl/) и [эмуляцию платформ](https://docs.docker.com/build/building/multi-platform/).
 

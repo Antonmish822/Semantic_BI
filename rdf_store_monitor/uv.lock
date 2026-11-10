@@ -64,7 +64,7 @@ wheels = [
 ]
 
 [[package]]
-name = "semantic-bi-fuseki-dashboard"
+name = "semantic-bi-rdf-store-monitor"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

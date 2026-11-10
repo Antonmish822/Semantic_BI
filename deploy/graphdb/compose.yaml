@@ -1,0 +1,52 @@
+services:
+  loader:
+    image: "ghcr.io/antonmish822/semantic-bi-loader:${LOADER_IMAGE_TAG:?Set LOADER_IMAGE_TAG to a release or SHA tag}"
+    platform: linux/amd64
+    user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
+    restart: unless-stopped
+    init: true
+    secrets:
+      - loader_config
+    volumes:
+      - graphdb_loader_state:/var/lib/semantic-bi
+    networks:
+      - default
+      - graphdb
+
+  monitor:
+    image: "ghcr.io/antonmish822/semantic-bi-monitor:${MONITOR_IMAGE_TAG:?Set MONITOR_IMAGE_TAG to a release or SHA tag}"
+    platform: linux/amd64
+    user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      DASHBOARD_ENV_FILE: /run/secrets/dashboard_env
+      DASHBOARD_HOST: 0.0.0.0
+      DASHBOARD_PORT: "8080"
+    secrets:
+      - dashboard_env
+    volumes:
+      - graphdb_loader_state:/var/lib/semantic-bi:ro
+    ports:
+      - "127.0.0.1:${GRAPHDB_MONITOR_PORT:-8081}:8080"
+    networks:
+      - default
+      - graphdb
+
+secrets:
+  loader_config:
+    file: ./config.yaml
+  dashboard_env:
+    file: ../../rdf_store_monitor/.env.graphdb
+
+volumes:
+  graphdb_loader_state:
+    external: true
+    name: semantic_bi_graphdb_state
+
+networks:
+  graphdb:
+    external: true
+    name: ${GRAPHDB_DOCKER_NETWORK:-graphdb_default}
