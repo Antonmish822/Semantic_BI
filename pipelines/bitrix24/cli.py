@@ -40,20 +40,65 @@ def main(argv=None):
     s3 = make_s3(config)
     checkpoint = Checkpoint(config.checkpoint_path)
     status_path = config.checkpoint_path.parent / "status.json"
+    backup_request_path = config.checkpoint_path.parent / "backup.request.json"
+    status_snapshot = {"last_run_id": None, "base_manifest_key": None}
 
     def write_status(**extra):
+        if checkpoint is not None and checkpoint.db is not None:
+            status_snapshot["last_run_id"] = checkpoint.get_meta("last_run_id")
+            status_snapshot["base_manifest_key"] = checkpoint.get_meta("base_manifest_key")
         payload = {"updated_at": datetime.now(timezone.utc).isoformat(),
                    "mode": "once" if args.once else "continuous",
-                   "last_run_id": checkpoint.get_meta("last_run_id"),
-                   "base_manifest_key": checkpoint.get_meta("base_manifest_key"), **extra}
+                   **status_snapshot, **extra}
+        if "maintenance" not in extra:
+            payload.pop("maintenance", None)
         temp = status_path.with_suffix(".json.tmp")
         temp.write_text(json.dumps(payload, ensure_ascii=False) + "\n", encoding="utf-8")
         os.replace(temp, status_path)
+
+    def pause_for_backup():
+        nonlocal checkpoint
+        try:
+            request = json.loads(backup_request_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return
+        except (OSError, ValueError) as exc:
+            logging.getLogger("rdf_sync").error("Некорректный запрос backup barrier: %s", exc)
+            return
+        backup_id = request.get("backup_id")
+        if not isinstance(backup_id, str) or not backup_id:
+            logging.getLogger("rdf_sync").error("Запрос backup barrier не содержит backup_id")
+            return
+
+        # Finish the current cycle before closing SQLite. The backup process can
+        # then capture one stable RDF/checkpoint pair and atomically replace it
+        # during a restore without a live SQLite connection.
+        checkpoint.suspend()
+        write_status(state="paused", phase="backup_barrier", error=None,
+                     maintenance={"state": "paused", "backup_id": backup_id})
+        logging.getLogger("rdf_sync").info("Загрузчик приостановлен на backup barrier %s", backup_id)
+        while True:
+            time.sleep(1)
+            try:
+                current = json.loads(backup_request_path.read_text(encoding="utf-8"))
+            except FileNotFoundError:
+                break
+            except (OSError, ValueError):
+                continue
+            if current.get("backup_id") != backup_id:
+                break
+
+        checkpoint.resume()
+        checkpoint.bind_store(config.backend, identity)
+        write_status(state="waiting", phase="cycle", error=None,
+                     maintenance={"state": "resumed", "backup_id": backup_id})
+        logging.getLogger("rdf_sync").info("Загрузчик возобновлён после backup barrier %s", backup_id)
 
     identity = store.endpoint
     try:
         checkpoint.bind_store(config.backend, identity)
         while True:
+            pause_for_backup()
             write_status(state="running", phase="cycle", error=None)
             try:
                 run_cycle(s3, config, checkpoint, mappings, store)
@@ -64,11 +109,15 @@ def main(argv=None):
                     raise
             else:
                 write_status(state="idle" if args.once else "waiting", phase="cycle", error=None)
+            pause_for_backup()
             if args.once:
                 return
-            time.sleep(config.poll_interval)
+            for _ in range(config.poll_interval):
+                pause_for_backup()
+                time.sleep(1)
     finally:
-        checkpoint.close()
+        if checkpoint is not None:
+            checkpoint.close()
 
 
 if __name__ == "__main__":

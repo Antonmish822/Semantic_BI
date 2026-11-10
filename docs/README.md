@@ -5,6 +5,7 @@
 - [Контракт интеграции с Bitrix24 и S3](RDF_INTEGRATION.md)
 - [Логика загрузки из S3 в RDF-хранилище](S3_TO_FUSEKI_LOADING.md)
 - [Текущие ограничения и надёжность синхронизации](SYNC_RELIABILITY_BACKLOG.md)
+- [Резервное копирование и восстановление GraphDB/Fuseki вместе с checkpoint](BACKUP_RESTORE_ARCHITECTURE.md)
 
 ## Планы и проверка
 

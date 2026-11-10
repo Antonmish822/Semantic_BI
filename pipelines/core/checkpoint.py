@@ -5,6 +5,7 @@ from pathlib import Path
 
 class Checkpoint:
     def __init__(self, path: Path):
+        self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
         self.lock_file = path.with_suffix(path.suffix + ".lock").open("a+")
         try:
@@ -110,6 +111,23 @@ class Checkpoint:
                 yield row
 
     def close(self) -> None:
-        self.db.close()
+        if self.db is not None:
+            self.db.close()
         fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_UN)
         self.lock_file.close()
+
+    def suspend(self) -> None:
+        """Close SQLite while retaining the process-wide checkpoint lock."""
+        if self.db is None:
+            return
+        self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        self.db.close()
+        self.db = None
+
+    def resume(self) -> None:
+        """Reopen the database after maintenance without releasing its lock."""
+        if self.db is not None:
+            return
+        self.db = sqlite3.connect(self.path)
+        self.db.row_factory = sqlite3.Row
+        self.db.execute("PRAGMA journal_mode=WAL")

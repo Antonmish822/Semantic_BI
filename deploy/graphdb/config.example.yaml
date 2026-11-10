@@ -16,6 +16,11 @@ graphdb:
   repository: "fuseki_migration_monitor"
   username: ""
   password: ""
+  # Необязательно: отдельная GraphDB-учётная запись администратора для Recovery API.
+  # Если security включена, при пустых backup_* используются username/password выше.
+  # При отключённой GraphDB security можно оставить все эти поля пустыми.
+  backup_username: ""
+  backup_password: ""
   timeout_seconds: 90
   graph_namespace: "urn:bitrix24:entity"
 snapshot_reconcile_entity_types: [deal, user, category, stage, source]

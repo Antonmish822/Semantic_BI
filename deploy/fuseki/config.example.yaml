@@ -1,0 +1,25 @@
+s3:
+  bucket: "your-bucket"
+  portal_id: "your-portal-id"
+  endpoint_url: "https://storage.yandexcloud.net"
+  region: "ru-central1"
+  access_key: "YOUR_S3_ACCESS_KEY_ID"
+  secret_key: "YOUR_S3_SECRET_ACCESS_KEY"
+mapping:
+  registry_path: "/app/mappings/bitrix24/registry.json"
+  schemas_root: "/app/mappings/bitrix24"
+checkpoint:
+  path: "/var/lib/semantic-bi/state.sqlite3"
+backend: fuseki
+fuseki:
+  # Fuseki dataset URL, without /data or /query.
+  url: "http://jena-fuseki-owl2:3030/Persistent"
+  username: ""
+  password: ""
+  timeout_seconds: 90
+  # Must be the same host directory as FUSEKI_BASE/backups, mounted in compose.yaml.
+  backup_directory: "/fuseki/backups"
+  backup_timeout_seconds: 1800
+  graph_namespace: "urn:bitrix24:entity"
+snapshot_reconcile_entity_types: [deal, user, category, stage, source]
+poll_interval_seconds: 60

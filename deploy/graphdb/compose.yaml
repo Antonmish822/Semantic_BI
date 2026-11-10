@@ -1,4 +1,24 @@
 services:
+  backup:
+    image: "ghcr.io/antonmish822/semantic-bi-loader:${LOADER_IMAGE_TAG:?Set LOADER_IMAGE_TAG to a release or SHA tag}"
+    platform: linux/amd64
+    user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
+    profiles: ["backup"]
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    entrypoint: ["python", "-m", "pipelines.backup.cli"]
+    command: ["--config", "/run/secrets/loader_config", "create", "--output", "/backups"]
+    secrets:
+      - loader_config
+    volumes:
+      - graphdb_loader_state:/var/lib/semantic-bi
+      - "${GRAPHDB_BACKUP_DIR:-./backups/graphdb}:/backups"
+    networks:
+      - default
+      - graphdb
+
   loader:
     image: "ghcr.io/antonmish822/semantic-bi-loader:${LOADER_IMAGE_TAG:?Set LOADER_IMAGE_TAG to a release or SHA tag}"
     platform: linux/amd64

@@ -12,6 +12,8 @@ Semantic_BI загружает данные Bitrix24 из S3 в RDF-хранил
 
 Краткие правила работы ИИ-агента с GraphDB API собраны в [памятке GraphDB API](docs/GRAPHDB_AGENT_API_GUIDE.md).
 
+Согласованный backup/restore RDF-хранилища и loader checkpoint для GraphDB и Fuseki описан в [архитектуре и инструкции резервного копирования](docs/BACKUP_RESTORE_ARCHITECTURE.md). Инструкция включает онлайн pause barrier и offline-режим для старых образов. Для Fuseki используйте [deploy/fuseki/compose.yaml](deploy/fuseki/compose.yaml) и локальную конфигурацию на основе [config.example.yaml](deploy/fuseki/config.example.yaml).
+
 ## Что делает загрузчик
 
 Для каждой CRM-сущности загрузчик вычисляет стабильный URI именованного графа по `entity_key`. Новая версия сущности полностью заменяет её граф; событие удаления удаляет граф. SQLite checkpoint хранит принятый snapshot, позиции обработки и применённые версии mappings. Checkpoint должен сохраняться между запусками и использоваться только с тем RDF-хранилищем, которому он принадлежит.
