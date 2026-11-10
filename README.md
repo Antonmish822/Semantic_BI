@@ -55,21 +55,22 @@ CI собирает loader вместе с native `cccr_engine` и monitor, за
 
 ```bash
 read -rsp 'GitHub token: ' GHCR_TOKEN; echo
-printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u ВАШ_GITHUB_ЛОГИН --password-stdin
 unset GHCR_TOKEN
 ```
 
 Используйте GitHub Personal Access Token (classic) с правом `read:packages`. `read -s` скрывает ввод токена; не передавайте токен аргументом команды и не сохраняйте его в конфигурации проекта.
 
-Для production задайте одинаковый immutable SHA tag для обоих образов:
+Для production задайте одинаковый immutable SHA tag для обоих образов. Подставьте полный SHA коммита вместо примера:
 
 ```bash
-export LOADER_IMAGE_TAG=sha-<full-commit-sha>
-export MONITOR_IMAGE_TAG=sha-<full-commit-sha>
+export LOADER_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
+export MONITOR_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
+# Замените пример выше полным SHA нужного коммита.
 docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 ```
 
-Для быстрой проверки ветки переменные можно не задавать: по умолчанию используется подвижный `branch-feat-entity-key-fuseki-sync`. Конфигурация с credentials остаётся в `deploy/loader/config.yaml`, отдельно от образа; checkpoint хранится в постоянном volume.
+Для быстрой проверки ветки переменные можно не задавать: по умолчанию используется подвижный `branch-feat-entity-key-fuseki-sync`. Чтобы получить последнюю опубликованную версию этого тега, перед запуском выполните `docker compose -p semantic_bi -f deploy/loader/compose.yaml pull`. Compose сам не проверяет наличие новой версии тега при каждом `up`. Конфигурация с credentials остаётся в `deploy/loader/config.yaml`, отдельно от образа; checkpoint хранится в постоянном volume.
 
 ### 5. Проверить один цикл
 

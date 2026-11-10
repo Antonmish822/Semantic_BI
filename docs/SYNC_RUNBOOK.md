@@ -66,19 +66,20 @@ Compose запускает опубликованные образы из зак
 
 ```bash
 read -rsp 'GitHub token: ' GHCR_TOKEN; echo
-printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u ВАШ_GITHUB_ЛОГИН --password-stdin
 unset GHCR_TOKEN
 ```
 
 Для production закрепите SHA-версию, после чего загрузите её:
 
 ```bash
-export LOADER_IMAGE_TAG=sha-<full-commit-sha>
-export MONITOR_IMAGE_TAG=sha-<full-commit-sha>
+export LOADER_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
+export MONITOR_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
+# Замените пример выше полным SHA нужного коммита.
 docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 ```
 
-Если переменные не заданы, используется последний образ ветки `feat/entity-key-fuseki-sync`. На целевой машине сборка из исходников не выполняется. CI собирает образ, включая CCCR native engine, и выполняет проверки из Dockerfile.
+Если переменные не заданы, Compose ссылается на подвижный тег `branch-feat-entity-key-fuseki-sync`. Чтобы получить последнюю опубликованную версию, перед запуском обязательно выполните `docker compose -p semantic_bi -f deploy/loader/compose.yaml pull`; `up` сам не обновляет локально имеющийся образ. На целевой машине сборка из исходников не выполняется. CI собирает образ, включая CCCR native engine, и выполняет проверки из Dockerfile.
 
 ## Выполнить один цикл
 

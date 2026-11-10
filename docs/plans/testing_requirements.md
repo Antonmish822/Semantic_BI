@@ -156,8 +156,9 @@ Fuseki-репетиции не считается проверкой GraphDB.
 | Реальная Fuseki проверка с полным checkpoint | Пройдено на изолированной копии |
 | Отдельный GraphDB snapshot/incremental/repeat прогон | Пройдено на GraphDB 10.8.14 |
 | Полная GraphDB checkpoint-репетиция | Пропущена по решению пользователя |
-| Чистая CI-сборка и workflow | Ожидается после загрузки ветки; итоги CI нужно добавить после завершения workflow |
+| CI-сборка и публикация контейнеров | Образы loader и monitor скачаны из GHCR и запущены из тега `branch-feat-entity-key-fuseki-sync`; workflow публикации завершился достаточно успешно для создания обоих образов |
+| Проверка контейнерного запуска | Пройдено 2026-11-10: loader и monitor запущены без рестартов, monitor API — HTTP 200, Fuseki доступен, loader `caught_up: true`, ошибок нет |
 
 CI workflow получает закрытый submodule `cccr_engine` через `SOURCECRAFT_SSH_KEY`
 и `SOURCECRAFT_KNOWN_HOSTS`; пользователь подтвердил, что они настроены в
-репозитории. Локальная приёмка не включает публикацию или merge.
+репозитории. GHCR publication подтверждена наличием и запуском обоих образов.

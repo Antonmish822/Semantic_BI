@@ -36,8 +36,9 @@ GHCR packages хранятся закрытыми. Workflow публикации
 На целевом хосте можно выбрать фиксированную версию так:
 
 ```bash
-export LOADER_IMAGE_TAG=sha-<full-commit-sha>
-export MONITOR_IMAGE_TAG=sha-<full-commit-sha>
+# Замените SHA-пример полным SHA нужного коммита.
+export LOADER_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
+export MONITOR_IMAGE_TAG=sha-0123456789abcdef0123456789abcdef01234567
 docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d
 ```

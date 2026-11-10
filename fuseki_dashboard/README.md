@@ -17,7 +17,7 @@ SPARQL-шаблоны находятся в `queries/`. Дополнительн
 | Локально | Linux/macOS, Python 3.10+, `uv` (проект проверен с 0.9.10), сетевой доступ к S3 и Fuseki |
 | Docker Compose | Docker Engine и Compose plugin, доступ к Docker network Fuseki и checkpoint volume загрузчика |
 
-Локальные Python-зависимости зафиксированы в `uv.lock`; основная зависимость приложения — `boto3`. В контейнере используется Python 3.13 и образ собирается по `deploy/monitor/Dockerfile`.
+Локальные Python-зависимости зафиксированы в `uv.lock`; основная зависимость приложения — `boto3`. Контейнерный образ для Python 3.13 публикуется в GHCR workflow-ом проекта из [`deploy/monitor/Dockerfile`](../deploy/monitor/Dockerfile); на сервере его не нужно собирать.
 
 Для синхронизации с экспортёром требуется S3 credential с правами только на чтение/листинг нужного portal prefix. Для Fuseki используйте учётную запись только для чтения SPARQL, если такая настроена.
 
@@ -63,7 +63,7 @@ docker compose -p semantic_bi -f deploy/loader/compose.yaml pull monitor
 docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d --no-deps monitor
 ```
 
-Эти команды скачивают готовый GHCR-образ и запускают только сервис `monitor`; активный сервис `loader` не пересоздаётся. Для закрытого пакета предварительно войдите в `ghcr.io` с токеном `read:packages`. Интерфейс публикуется только на loopback хоста по адресу <http://127.0.0.1:8080>. Проверить журнал:
+Перед `pull` для закрытого GHCR-пакета войдите в `ghcr.io` с PAT classic и правом `read:packages` (порядок входа приведён в [инструкции загрузчика](../docs/SYNC_RUNBOOK.md#docker-compose)). Эти команды скачивают готовый образ и запускают только сервис `monitor`; активный сервис `loader` не пересоздаётся. Интерфейс публикуется только на loopback хоста по адресу <http://127.0.0.1:8080>. Проверить журнал:
 
 ```bash
 docker compose -p semantic_bi -f deploy/loader/compose.yaml logs -f monitor
