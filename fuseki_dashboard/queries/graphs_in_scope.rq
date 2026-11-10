@@ -1,0 +1,5 @@
+# List named graphs in the dashboard's configured URI namespace.
+SELECT DISTINCT ?g WHERE {
+  GRAPH ?g {}
+  FILTER(STRSTARTS(STR(?g), {{graph_prefix}}))
+}

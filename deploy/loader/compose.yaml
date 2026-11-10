@@ -5,16 +5,51 @@ services:
     build:
       context: ../..
       dockerfile: deploy/loader/Dockerfile
+    # File-backed Compose secrets keep host ownership/mode; run as the host
+    # user so a 0600 local config remains readable without broadening access.
+    user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
     restart: unless-stopped
     init: true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     secrets:
       - loader_config
     volumes:
       - loader_state:/var/lib/semantic-bi
+    networks:
+      - default
+      - fuseki
+  monitor:
+    image: semantic-bi-monitor:${LOADER_TAG:-local}
+    build:
+      context: ../..
+      dockerfile: deploy/monitor/Dockerfile
+    user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      DASHBOARD_ENV_FILE: /run/secrets/dashboard_env
+      DASHBOARD_HOST: 0.0.0.0
+      DASHBOARD_PORT: "8080"
+    secrets:
+      - dashboard_env
+    volumes:
+      - loader_state:/var/lib/semantic-bi:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - default
+      - fuseki
 secrets:
   loader_config:
     file: ./config.yaml
+  dashboard_env:
+    file: ../../fuseki_dashboard/.env
 volumes:
   loader_state:
+    external: true
+    name: semantic_bi_loader_state_migrated
+networks:
+  fuseki:
+    external: true
+    name: fuseki_default
