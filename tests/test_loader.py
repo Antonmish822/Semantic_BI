@@ -22,7 +22,7 @@ from pipelines.stores.graphdb import GraphDBStore
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def config_text(backend='fuseki', checkpoint='state.sqlite3'):
+def config_text(backend='fuseki', checkpoint='state.sqlite3', resume_mode='strict'):
     return f'''s3:
   bucket: test
   portal_id: portal-a
@@ -33,6 +33,7 @@ mapping:
   schemas_root: {ROOT / 'mappings/bitrix24'}
 checkpoint:
   path: {checkpoint}
+  resume_mode: {resume_mode}
 backend: {backend}
 fuseki:
   url: http://fuseki.invalid/ds
@@ -44,15 +45,17 @@ graphdb:
 '''
 
 
-def load_test_config(tmp, backend='fuseki'):
+def load_test_config(tmp, backend='fuseki', resume_mode='strict'):
     p = Path(tmp) / 'config.yaml'
-    p.write_text(config_text(backend), encoding='utf-8')
+    p.write_text(config_text(backend, resume_mode=resume_mode), encoding='utf-8')
     return load_config(p)
 
 
 class FakeS3:
-    def __init__(self, objects): self.objects = objects
-    def get_object(self, Bucket, Key): return {'Body': io.BytesIO(self.objects[Key])}
+    def __init__(self, objects): self.objects = objects; self.get_calls=[]
+    def get_object(self, Bucket, Key):
+        self.get_calls.append(Key)
+        return {'Body': io.BytesIO(self.objects[Key])}
 
 
 class FakeStore:
@@ -65,20 +68,21 @@ class FakeStore:
         self.calls.append(('DELETE', uri))
 
 
-def upsert(title='first'):
-    payload={'ID':'42','TITLE':title,'DATE_MODIFY':'2026-01-01T00:00:00Z'}
+def upsert(title='first', identity='42'):
+    payload={'ID':str(identity),'TITLE':title,'DATE_MODIFY':'2026-01-01T00:00:00Z'}
     digest=hashlib.sha256(canonical_json({'payload':payload,'bindings':[]})).hexdigest()
-    event_id=hashlib.sha256(f"portal-a|deal|42|{payload['DATE_MODIFY']}|{digest}".encode()).hexdigest()
+    event_id=hashlib.sha256(f"portal-a|deal|{identity}|{payload['DATE_MODIFY']}|{digest}".encode()).hexdigest()
     return {'schema_version':3,'event_id':event_id,'graph_id':f'urn:bitrix24:graph:portal-a:{event_id}',
-            'entity_key':'portal-a/deal/42','operation':'upsert','source_modified_at':payload['DATE_MODIFY'],
+            'entity_key':f'portal-a/deal/{identity}','operation':'upsert','source_modified_at':payload['DATE_MODIFY'],
             'payload':payload,'bindings':[]}
 
 
 def ref_for(event):
     body=json.dumps(event).encode()
-    key=f"bitrix24/portal-a/events/deal/42/{event['event_id']}.json"
+    portal,entity_type,identity=event['entity_key'].split('/',2)
+    key=f"bitrix24/{portal}/events/{entity_type}/{identity}/{event['event_id']}.json"
     return {'key':key,'event_id':event['event_id'],'graph_id':event['graph_id'],
-            'sha256':hashlib.sha256(body).hexdigest(),'entity':'deal'},body
+            'sha256':hashlib.sha256(body).hexdigest(),'entity':entity_type},body
 
 
 class ConfigTests(unittest.TestCase):
@@ -252,6 +256,40 @@ class PipelineTests(unittest.TestCase):
                 self.assertEqual(cp.get_entity('portal-a/deal/41')['deleted'],1)
                 self.assertEqual(cp.get_entity('portal-a/activity/7')['deleted'],0)
                 self.assertTrue(cp.run_done('local-r1'))
+            finally: cp.close()
+
+    def test_fast_resume_skips_download_of_checkpointed_snapshot_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg=load_test_config(tmp,resume_mode='fast');cp=Checkpoint(cfg.checkpoint_path)
+            events=[upsert('first','42'),upsert('second','43')]
+            refs_and_bodies=[ref_for(event) for event in events]
+            refs=[item[0] for item in refs_and_bodies]
+            source=FakeS3({ref['key']:body for ref,body in refs_and_bodies})
+            manifest={'run_id':'local-r-fast','mode':'local_snapshot','status':'complete','complete':True,
+                      'catchup_to':'2026-01-01T00:00:00Z','counts':{'deal':2},'objects':refs}
+
+            class InterruptOnceStore(FakeStore):
+                def __init__(self): super().__init__(); self.interrupted=False
+                def replace_graph(self, uri, data):
+                    if len(self.calls)==1 and not self.interrupted:
+                        self.interrupted=True
+                        raise RuntimeError('simulated interruption')
+                    super().replace_graph(uri,data)
+
+            store=InterruptOnceStore()
+            try:
+                with patch('pipelines.bitrix24.runner.transform_event',return_value=b'<rdf/>'):
+                    with self.assertRaisesRegex(RuntimeError,'simulated interruption'):
+                        process_manifest(source,cfg,cp,[],'runs/local-r-fast/manifest.json',
+                                         manifest,'local_snapshot','mapping-v1',store=store)
+                    self.assertIsNotNone(cp.get_entity(events[0]['entity_key']))
+                    self.assertIsNone(cp.get_entity(events[1]['entity_key']))
+                    self.assertFalse(cp.run_done('local-r-fast'))
+                    process_manifest(source,cfg,cp,[],'runs/local-r-fast/manifest.json',
+                                     manifest,'local_snapshot','mapping-v1',store=store)
+                self.assertEqual(source.get_calls,[refs[0]['key'],refs[1]['key'],refs[1]['key']])
+                self.assertTrue(cp.run_done('local-r-fast'))
+                self.assertEqual(len(store.calls),2)
             finally: cp.close()
 
     def test_failed_manifest_replays_without_marking_run_done(self):
