@@ -15,6 +15,41 @@ from .mapper import MappingEntry, mapping_fingerprint, transform_event
 from .source import get_object_bytes, get_json, list_run_manifest_keys, validate_event, validate_manifest, parse_time, run_id_time, is_stale, not_newer_than, read_exporter_state, read_base_snapshot
 LOG = logging.getLogger("rdf_sync")
 
+
+def checkpoint_matches_ref(config: Config, checkpoint: Checkpoint,
+                           ref: dict[str, Any], mapping_version: str) -> str | None:
+    """Return the entity key when this exact event was already applied.
+
+    Fast resume trusts the manifest SHA and the SHA stored after the prior
+    full-body verification; it deliberately avoids fetching the event body.
+    """
+    key = ref.get("key")
+    if not isinstance(key, str) or not key.startswith(config.events_prefix):
+        return None
+    parts = key[len(config.events_prefix):].split("/")
+    if len(parts) != 3:
+        return None
+    entity_type, identity, filename = parts
+    if entity_type not in SUPPORTED_ENTITIES or not filename.endswith(".json"):
+        return None
+    event_id = filename[:-5]
+    digest = ref.get("sha256")
+    if (not event_id or event_id != ref.get("event_id")
+            or ref.get("entity") != entity_type
+            or ref.get("graph_id") != f"urn:bitrix24:graph:{config.portal_id}:{event_id}"
+            or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
+        return None
+    entity_key = f"{config.portal_id}/{entity_type}/{identity}"
+    graph_uri = entity_graph_uri(config.graph_namespace, entity_key)
+    previous = checkpoint.get_entity(entity_key)
+    if (previous and previous["source_key"] == key
+            and previous["event_id"] == event_id
+            and previous["sha256"] == digest
+            and previous["graph_uri"] == graph_uri
+            and previous["mapping_version"] == mapping_version):
+        return entity_key
+    return None
+
 def apply_event(s3, config: Config, checkpoint: Checkpoint, mappings: list[MappingEntry],
                 ref: dict[str, Any], mapping_version: str,
                 authoritative_snapshot: bool = False,
@@ -71,18 +106,28 @@ def process_manifest(s3, config: Config, checkpoint: Checkpoint,
     run_id = manifest["run_id"]
     refs = validate_manifest(manifest, run_id, mode)
     present: set[str] = set()
+    fast_skipped = 0
     for ref in refs:
-        entity_key = apply_event(
-            s3, config, checkpoint, mappings, ref, mapping_version,
-            authoritative_snapshot=(mode == "local_snapshot"),
-            baseline_modified_at=baseline_modified_at, store=store,
-        )
+        entity_key = None
+        if config.fast_resume:
+            entity_key = checkpoint_matches_ref(config, checkpoint, ref, mapping_version)
+            if entity_key is not None:
+                fast_skipped += 1
+        if entity_key is None:
+            entity_key = apply_event(
+                s3, config, checkpoint, mappings, ref, mapping_version,
+                authoritative_snapshot=(mode == "local_snapshot"),
+                baseline_modified_at=baseline_modified_at, store=store,
+            )
         if mode == "local_snapshot" and entity_key in present:
             raise ValueError(f"Полный снимок содержит несколько версий {entity_key}")
         present.add(entity_key)
     if mode == "local_snapshot":
         reconcile_snapshot(config, checkpoint, store, present, run_id, manifest, mapping_version)
     checkpoint.save_run(run_id, manifest_key, manifest.get("created_at"), mode)
+    if fast_skipped:
+        LOG.info("Быстрое восстановление: пропущено скачивание %d из %d уже применённых событий",
+                 fast_skipped, len(refs))
     return present
 
 

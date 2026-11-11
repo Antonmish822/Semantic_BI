@@ -35,6 +35,9 @@ def main(argv=None):
     logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO),
                         format="%(asctime)s [%(levelname)s] %(message)s")
     config = load_config(args.config.resolve())
+    logging.getLogger("rdf_sync").info(
+        "Режим восстановления: %s", "fast" if config.fast_resume else "strict"
+    )
     store = make_store(config)
     mappings = load_mappings(config)
     s3 = make_s3(config)

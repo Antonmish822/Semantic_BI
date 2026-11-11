@@ -10,6 +10,7 @@ mapping:
   schemas_root: "/app/mappings/bitrix24"
 checkpoint:
   path: "/var/lib/semantic-bi/state.sqlite3"
+  resume_mode: strict
 backend: graphdb
 graphdb:
   url: "http://graphdb:7200"

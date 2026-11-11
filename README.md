@@ -57,7 +57,7 @@ uv run python -m unittest discover -s tests -v
 cp deploy/loader/config.example.yaml deploy/loader/config.yaml
 ```
 
-Заполните в `deploy/loader/config.yaml` S3 bucket и ключи, выбранный backend и адрес хранилища. Для Fuseki `fuseki.url` задаётся как адрес dataset без `/data`; для GraphDB задайте `graphdb.url` как адрес сервера без `/repositories` и имя `graphdb.repository`. Пути `/app/mappings/bitrix24/...` подходят для контейнера; для локального запуска замените их на пути checkout, задайте адрес RDF-хранилища, доступный с хоста, и отдельный локальный `checkpoint.path`. Для GraphDB используйте отдельный checkpoint и том. Не добавляйте в Git конфигурацию с секретами или файлы SQLite.
+Заполните в `deploy/loader/config.yaml` S3 bucket и ключи, выбранный backend и адрес хранилища. Для Fuseki `fuseki.url` задаётся как адрес dataset без `/data`; для GraphDB задайте `graphdb.url` как адрес сервера без `/repositories` и имя `graphdb.repository`. Пути `/app/mappings/bitrix24/...` подходят для контейнера; для локального запуска замените их на пути checkout, задайте адрес RDF-хранилища, доступный с хоста, и отдельный локальный `checkpoint.path`. Для GraphDB используйте отдельный checkpoint и том. По умолчанию `checkpoint.resume_mode: strict` скачивает и проверяет SHA-256 каждого события. Для ускорения повторного запуска после прерывания задайте `checkpoint.resume_mode: fast`; режим пропустит скачивание только для событий, которые точно совпадают с checkpoint. Описание и ограничения режима — в [руководстве по загрузке](docs/S3_TO_FUSEKI_LOADING.md#быстрое-восстановление). Не добавляйте в Git конфигурацию с секретами или файлы SQLite.
 
 ### 4. Получить опубликованные образы
 

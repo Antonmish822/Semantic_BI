@@ -22,6 +22,7 @@ class Config:
     registry_path: Path
     schemas_root: Path
     checkpoint_path: Path
+    fast_resume: bool
     poll_interval: int
     reconcile_entity_types: frozenset[str]
 
@@ -49,6 +50,9 @@ def load_config(path: Path) -> Config:
         raise ValueError(f"{backend} должен быть объектом")
     mapping = raw.get("mapping") or {}
     checkpoint = raw.get("checkpoint") or {}
+    resume_mode = checkpoint.get("resume_mode", "strict")
+    if resume_mode not in {"strict", "fast"}:
+        raise ValueError("checkpoint.resume_mode должен быть strict или fast")
     missing = [key for key in ("bucket", "portal_id", "access_key", "secret_key") if not s3.get(key)]
     if missing:
         raise ValueError(f"Не заданы параметры s3: {', '.join(missing)}")
@@ -90,6 +94,7 @@ def load_config(path: Path) -> Config:
         registry_path=resolve(mapping["registry_path"]),
         schemas_root=resolve(mapping["schemas_root"]),
         checkpoint_path=resolve(checkpoint.get("path", "state.sqlite3")),
+        fast_resume=resume_mode == "fast",
         poll_interval=max(1, int(raw.get("poll_interval_seconds", 60))),
         reconcile_entity_types=reconcile,
     )

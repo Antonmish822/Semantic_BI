@@ -10,6 +10,9 @@ mapping:
   schemas_root: "/app/mappings/bitrix24"
 checkpoint:
   path: "/var/lib/semantic-bi/state.sqlite3"
+  # strict downloads and SHA-256 checks every event; fast skips event bodies
+  # only when the checkpoint already contains the exact manifest event.
+  resume_mode: strict
 backend: fuseki
 fuseki:
   url: "http://host.docker.internal:3030/cccr"
