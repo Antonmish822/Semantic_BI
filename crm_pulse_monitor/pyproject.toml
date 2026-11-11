@@ -1,0 +1,9 @@
+[project]
+name = "semantic-bi-crm-pulse-monitor"
+version = "0.1.0"
+description = "Read-only CRM pulse dashboard backed by GraphDB or Fuseki"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.uv]
+package = false

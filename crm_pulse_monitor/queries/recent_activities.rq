@@ -1,0 +1,43 @@
+PREFIX b24: <https://example.org/bitrix24#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT DISTINCT ?activity ?subject ?activity_at ?deal ?deal_title
+                ?deal_classes ?employee ?employee_name
+FROM <http://www.ontotext.com/implicit>
+WHERE {
+  GRAPH ?activity_graph {
+    ?activity b24:owner ?deal ;
+              b24:ownerTypeId "2" ;
+              b24:createdAt ?activity_raw ;
+              b24:responsible ?employee .
+    OPTIONAL { ?activity b24:subject ?subject }
+  }
+  FILTER(STRSTARTS(STR(?activity_graph), {{graph_prefix}})
+         && CONTAINS(STR(?activity_graph), ":activity:"))
+  BIND(xsd:dateTime(STR(?activity_raw)) AS ?activity_at)
+
+  OPTIONAL {
+    GRAPH ?deal_graph { ?deal b24:title ?deal_title }
+    FILTER(STRSTARTS(STR(?deal_graph), {{graph_prefix}})
+           && CONTAINS(STR(?deal_graph), ":deal:"))
+  }
+
+  OPTIONAL {
+    GRAPH ?user_graph { ?employee b24:fullName ?employee_name }
+    FILTER(STRSTARTS(STR(?user_graph), {{graph_prefix}})
+           && CONTAINS(STR(?user_graph), ":user:"))
+  }
+
+  OPTIONAL {
+    SELECT ?deal (GROUP_CONCAT(DISTINCT ?class_label; separator=" · ") AS ?deal_classes)
+    WHERE {
+      ?deal rdf:type ?deal_class .
+      FILTER(STRSTARTS(STR(?deal_class), "https://example.org/crm#"))
+      BIND(STRAFTER(STR(?deal_class), "https://example.org/crm#") AS ?class_label)
+    }
+    GROUP BY ?deal
+  }
+}
+ORDER BY DESC(?activity_at)
+LIMIT 20

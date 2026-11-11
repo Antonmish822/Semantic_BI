@@ -1,0 +1,78 @@
+PREFIX b24: <https://example.org/bitrix24#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?employee ?full_name ?active_deals ?inactive_deals_7d
+       ?activities_24h ?activities_7d ?activities_30d
+FROM <http://www.ontotext.com/implicit>
+WHERE {
+  {
+    SELECT ?employee
+           (COUNT(DISTINCT ?deal) AS ?active_deals)
+           (SUM(IF(?has_activity_7d, 0, 1)) AS ?inactive_deals_7d)
+    WHERE {
+      VALUES ?selected_project { {{selected_project}} }
+      ?deal a b24:ActiveDeal .
+      GRAPH ?deal_graph {
+        ?deal b24:assignedTo ?employee ;
+              b24:categoryCode ?category_code .
+      }
+      FILTER(?selected_project = "all"
+             || STR(?category_code) = ?selected_project)
+      FILTER(STRSTARTS(STR(?deal_graph), {{graph_prefix}})
+             && CONTAINS(STR(?deal_graph), ":deal:"))
+      BIND(EXISTS {
+        GRAPH ?activity_graph {
+          ?activity b24:owner ?deal ;
+                    b24:ownerTypeId "2" ;
+                    b24:createdAt ?activity_raw .
+        }
+        FILTER(STRSTARTS(STR(?activity_graph), {{graph_prefix}})
+               && CONTAINS(STR(?activity_graph), ":activity:"))
+        BIND(xsd:dateTime(STR(?activity_raw)) AS ?activity_at)
+        FILTER(?activity_at >= NOW() - "P7D"^^xsd:dayTimeDuration
+               && ?activity_at <= NOW())
+      } AS ?has_activity_7d)
+    }
+    GROUP BY ?employee
+  }
+
+  OPTIONAL {
+    GRAPH ?user_graph { ?employee b24:fullName ?full_name }
+    FILTER(STRSTARTS(STR(?user_graph), {{graph_prefix}})
+           && CONTAINS(STR(?user_graph), ":user:"))
+  }
+
+  OPTIONAL {
+    SELECT ?employee
+           (SUM(IF(?activity_at >= NOW() - "PT24H"^^xsd:dayTimeDuration, 1, 0)) AS ?activities_24h)
+           (SUM(IF(?activity_at >= NOW() - "P7D"^^xsd:dayTimeDuration, 1, 0)) AS ?activities_7d)
+           (SUM(IF(?activity_at >= NOW() - "P30D"^^xsd:dayTimeDuration, 1, 0)) AS ?activities_30d)
+    WHERE {
+      VALUES ?activity_project { {{selected_project}} }
+      GRAPH ?activity_graph {
+        ?activity b24:responsible ?employee ;
+                  b24:createdAt ?activity_raw .
+      }
+      FILTER(STRSTARTS(STR(?activity_graph), {{graph_prefix}})
+             && CONTAINS(STR(?activity_graph), ":activity:"))
+      FILTER(?activity_project = "all" || EXISTS {
+        GRAPH ?category_activity_graph {
+          ?activity b24:owner ?activity_deal ;
+                    b24:ownerTypeId "2" .
+        }
+        GRAPH ?category_deal_graph {
+          ?activity_deal b24:categoryCode ?activity_category_code .
+        }
+        FILTER(STRSTARTS(STR(?category_deal_graph), {{graph_prefix}})
+               && CONTAINS(STR(?category_deal_graph), ":deal:")
+               && STR(?activity_category_code) = ?activity_project)
+      })
+      BIND(xsd:dateTime(STR(?activity_raw)) AS ?activity_at)
+      FILTER(?activity_at >= NOW() - "P30D"^^xsd:dayTimeDuration
+             && ?activity_at <= NOW())
+    }
+    GROUP BY ?employee
+  }
+}
+ORDER BY DESC(?active_deals) ?full_name
+LIMIT 20

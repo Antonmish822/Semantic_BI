@@ -1,0 +1,30 @@
+PREFIX b24: <https://example.org/bitrix24#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT
+  (COUNT(DISTINCT ?deal) AS ?active_deals)
+  (SUM(IF(?created_at >= NOW() - "PT24H"^^xsd:dayTimeDuration && ?created_at <= NOW(), 1, 0)) AS ?created_24h)
+  (SUM(IF(?created_at >= NOW() - "P7D"^^xsd:dayTimeDuration && ?created_at <= NOW(), 1, 0)) AS ?created_7d)
+  (SUM(IF(?created_at >= NOW() - "P30D"^^xsd:dayTimeDuration && ?created_at <= NOW(), 1, 0)) AS ?created_30d)
+  (SUM(IF(?has_activity_7d, 0, 1)) AS ?inactive_7d)
+WHERE {
+  GRAPH ?deal_graph {
+    ?deal b24:stageSemantic "P" ;
+          b24:createdAt ?created_raw .
+  }
+  FILTER(STRSTARTS(STR(?deal_graph), {{graph_prefix}})
+         && CONTAINS(STR(?deal_graph), ":deal:"))
+  BIND(xsd:dateTime(STR(?created_raw)) AS ?created_at)
+  BIND(EXISTS {
+    GRAPH ?activity_graph {
+      ?activity b24:owner ?deal ;
+                b24:ownerTypeId "2" ;
+                b24:createdAt ?activity_raw .
+    }
+    FILTER(STRSTARTS(STR(?activity_graph), {{graph_prefix}})
+           && CONTAINS(STR(?activity_graph), ":activity:"))
+    BIND(xsd:dateTime(STR(?activity_raw)) AS ?activity_at)
+    FILTER(?activity_at >= NOW() - "P7D"^^xsd:dayTimeDuration
+           && ?activity_at <= NOW())
+  } AS ?has_activity_7d)
+}

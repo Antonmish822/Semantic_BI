@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>CRM Pulse — Semantic BI</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">P</div>
+        <div>
+          <p class="eyebrow">SEMANTIC BI · BITRIX24</p>
+          <h1>CRM Pulse</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="connection" class="connection pending"><i></i><span>Подключение…</span></span>
+        <span id="updated" class="updated">—</span>
+        <button id="refresh" class="refresh" type="button" aria-label="Обновить данные" title="Обновить данные">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9a7 7 0 0 1 11.8-2L20 12M4 12l2.6 5a7 7 0 0 0 11.8-2"/></svg>
+          <span>Обновить</span>
+        </button>
+      </div>
+    </header>
+
+    <div id="error" class="error-banner" hidden></div>
+
+    <section aria-labelledby="pulse-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">ТЕКУЩАЯ ВОРОНКА</p>
+          <h2 id="pulse-title">Активные сделки <span class="stage-pill">P · В работе</span></h2>
+        </div>
+        <p class="section-note">Срез обновляется автоматически · все интервалы считаются от текущего времени</p>
+      </div>
+      <div class="metric-grid">
+        <article class="metric-card metric-primary">
+          <div class="metric-label">Всего активных</div>
+          <div id="active-deals" class="metric-value">—</div>
+          <div class="metric-foot">Семантика стадии P</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-label">Создано за 24 часа</div>
+          <div id="created-24h" class="metric-value">—</div>
+          <div class="metric-foot">Новые сделки в работе</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-label">Создано за 7 дней</div>
+          <div id="created-7d" class="metric-value">—</div>
+          <div class="metric-foot">Новые сделки в работе</div>
+        </article>
+        <article class="metric-card">
+          <div class="metric-label">Создано за 30 дней</div>
+          <div id="created-30d" class="metric-value">—</div>
+          <div class="metric-foot">Новые сделки в работе</div>
+        </article>
+        <article class="metric-card metric-danger">
+          <div class="metric-label">Без активности 7 дней</div>
+          <div id="inactive-7d" class="metric-value">—</div>
+          <div class="metric-foot">Требуют внимания менеджера</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel red-panel" aria-labelledby="red-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow danger-eyebrow">ТРЕБУЮТ ВНИМАНИЯ</p>
+          <h2 id="red-title">Красные сделки</h2>
+          <p class="panel-subtitle">Владелец-сделка · нет записи активности за последние 7 дней</p>
+        </div>
+        <div class="red-controls">
+          <label class="red-project-filter">
+            <span>Категория</span>
+            <select id="red-project-filter" class="project-filter" aria-label="Фильтр красных сделок по категории">
+              <option value="all">Все категории</option>
+            </select>
+          </label>
+          <button id="toggle-red" class="secondary-button" type="button" aria-expanded="false" aria-controls="red-content">
+            <span>Показать список</span><span id="red-count" class="count-badge">—</span>
+          </button>
+        </div>
+      </div>
+      <div id="red-content" class="red-content" hidden>
+        <div id="red-loading" class="empty-state">Загружаю список сделок…</div>
+        <div class="table-wrap">
+          <table id="red-table" hidden>
+            <thead><tr><th>Сделка</th><th>Ответственный</th><th>Создана</th><th>Последняя активность в карточке</th></tr></thead>
+            <tbody id="red-rows"></tbody>
+          </table>
+        </div>
+        <div id="red-empty" class="empty-state" hidden>Сделок без активности за 7 дней нет.</div>
+      </div>
+    </section>
+
+    <section class="panel activities-panel" aria-labelledby="activities-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">ПОСЛЕДНИЕ СОБЫТИЯ</p>
+          <h2 id="activities-title">20 последних активностей по сделкам</h2>
+          <p class="panel-subtitle">Тема активности, семантический класс и название сделки, ответственный сотрудник.</p>
+        </div>
+        <button id="toggle-activities" class="secondary-button" type="button" aria-expanded="false" aria-controls="activities-content">
+          <span>Показать список</span><span class="count-badge activity-count">20</span>
+        </button>
+      </div>
+      <div id="activities-content" class="activities-content" hidden>
+        <div id="activities-loading" class="empty-state">Загружаю последние активности…</div>
+        <div class="table-wrap">
+          <table id="activities-table" hidden>
+            <thead><tr><th>Дата</th><th>Содержание активности</th><th>Сделка</th><th>Сотрудник</th></tr></thead>
+            <tbody id="activities-rows"></tbody>
+          </table>
+        </div>
+        <div id="activities-empty" class="empty-state" hidden>Активностей по сделкам пока нет.</div>
+      </div>
+    </section>
+
+    <section class="panel team-panel" aria-labelledby="team-title">
+      <div class="panel-heading team-heading">
+        <div>
+          <p class="eyebrow">НАГРУЗКА И РЕАКЦИЯ</p>
+          <h2 id="team-title">20 сотрудников с наибольшим портфелем</h2>
+          <p class="panel-subtitle">Активности считаются по ответственному CRM-дела; сделки — по назначенному сотруднику.</p>
+        </div>
+        <label class="team-filter">
+          <span>Портфель проекта</span>
+          <select id="project-filter" class="project-filter" aria-label="Фильтр сотрудников по проекту">
+            <option value="all">Все проекты</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Сотрудник</th><th class="number">Сделки P</th><th class="number">Активности · 24 ч</th><th class="number">7 дн.</th><th class="number">30 дн.</th><th class="number">Сделки без активности · 7 дн.</th></tr></thead>
+          <tbody id="employee-rows"><tr><td colspan="6" class="empty-state">Загружаю данные…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      <span>Только чтение · GraphDB / Fuseki</span>
+      <span>Активность считается по дате создания записи CRM Activity.</span>
+    </footer>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

@@ -117,23 +117,46 @@ class RDFStoreClient:
         for row in rows:
             kind = row["kind"]["value"]
             types[kind] = {"graphs": int(row["graphs"]["value"]),
-                           "modified_graphs": 0, "latest_modified_at": None}
-        latest_query = """PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-SELECT ?kind (MAX(?dt) AS ?latest) (COUNT(DISTINCT ?g) AS ?modifiedGraphs) WHERE {
+                           "modified_graphs": 0, "latest_modified_at": None,
+                           "latest_created_at": None}
+        modified_query = """PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT ?kind (MAX(?modifiedDt) AS ?latest)
+       (COUNT(DISTINCT ?modifiedGraph) AS ?modifiedGraphs) WHERE {
   VALUES (?kind ?marker) { ("deal" ":deal:") ("activity" ":activity:")
                            ("user" ":user:") ("category" ":category:")
                            ("stage" ":stage:") ("source" ":source:") }
-  GRAPH ?g { ?s <https://example.org/bitrix24#modifiedAt> ?raw . }
-  FILTER(STRSTARTS(STR(?g), {{graph_prefix}}) && CONTAINS(STR(?g), ?marker))
-  FILTER(isLiteral(?raw) && STR(?raw) != "")
-  BIND(xsd:dateTime(STR(?raw)) AS ?dt)
-  FILTER(BOUND(?dt))
+  GRAPH ?modifiedGraph {
+    ?modifiedSubject <https://example.org/bitrix24#modifiedAt> ?modifiedRaw
+  }
+  FILTER(STRSTARTS(STR(?modifiedGraph), {{graph_prefix}})
+         && CONTAINS(STR(?modifiedGraph), ?marker))
+  FILTER(isLiteral(?modifiedRaw) && STR(?modifiedRaw) != "")
+  BIND(xsd:dateTime(STR(?modifiedRaw)) AS ?modifiedDt)
+  FILTER(BOUND(?modifiedDt))
 } GROUP BY ?kind""".replace("{{graph_prefix}}", sparql_literal(self.graph_prefix))
-        for row in self.select(latest_query):
+        for row in self.select(modified_query):
             kind = row["kind"]["value"]
             if kind in types:
                 types[kind]["modified_graphs"] = int(row["modifiedGraphs"]["value"])
                 types[kind]["latest_modified_at"] = row.get("latest", {}).get("value")
+        created_query = """PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+SELECT ?kind (MAX(?createdDt) AS ?latestCreatedAt) WHERE {
+  VALUES (?kind ?marker) { ("deal" ":deal:") ("activity" ":activity:")
+                           ("user" ":user:") ("category" ":category:")
+                           ("stage" ":stage:") ("source" ":source:") }
+  GRAPH ?createdGraph {
+    ?createdSubject <https://example.org/bitrix24#createdAt> ?createdRaw
+  }
+  FILTER(STRSTARTS(STR(?createdGraph), {{graph_prefix}})
+         && CONTAINS(STR(?createdGraph), ?marker))
+  FILTER(isLiteral(?createdRaw) && STR(?createdRaw) != "")
+  BIND(xsd:dateTime(STR(?createdRaw)) AS ?createdDt)
+  FILTER(BOUND(?createdDt))
+} GROUP BY ?kind""".replace("{{graph_prefix}}", sparql_literal(self.graph_prefix))
+        for row in self.select(created_query):
+            kind = row["kind"]["value"]
+            if kind in types:
+                types[kind]["latest_created_at"] = row.get("latestCreatedAt", {}).get("value")
         return {"available": True, "backend": self.backend,
                 "backend_name": self.backend_name, "types": types,
                 "checked_at": datetime.now(timezone.utc).isoformat()}

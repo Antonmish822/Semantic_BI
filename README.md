@@ -6,6 +6,8 @@ Semantic_BI загружает данные Bitrix24 из S3 в RDF-хранил
 
 Требования среды и инструкции локального и контейнерного запуска монитора приведены в [README RDF Store Monitor](rdf_store_monitor/README.md).
 
+Для оперативного контроля активных сделок, бездействия по сделкам и нагрузки сотрудников есть локальный [CRM Pulse Monitor](crm_pulse_monitor/README.md). Он читает метрики из GraphDB или Fuseki и не изменяет RDF-хранилище.
+
 Для параллельного переноса текущих именованных графов из Fuseki в GraphDB с отдельными загрузчиком, монитором и checkpoint см. [руководство GraphDB-миграции](docs/GRAPHDB_PARALLEL_MIGRATION.md).
 
 Пошаговая команда-инструкция для подготовки repository, экспорта, переноса checkpoint, запуска и проверки отдельной пары контейнеров находится в [инструкции настройки GraphDB-связки](docs/GRAPHDB_PARALLEL_SETUP_INSTRUCTIONS.md).
