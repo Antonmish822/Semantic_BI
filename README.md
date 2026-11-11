@@ -71,15 +71,38 @@ unset GHCR_TOKEN
 
 Используйте GitHub Personal Access Token (classic) с правом `read:packages`. `read -s` скрывает ввод токена; не передавайте токен аргументом команды и не сохраняйте его в конфигурации проекта.
 
-Укажите существующий релизный Git-тег для обоих образов, например `v1.2.0`:
+Укажите один и тот же опубликованный тег для обоих образов. Последний Git-тег в этом checkout — `v1.3.0`; используйте его, если workflow публикации для этого тега завершился успешно и образы доступны в GHCR:
 
 ```bash
-export LOADER_IMAGE_TAG=v1.2.0
-export MONITOR_IMAGE_TAG=v1.2.0
+export LOADER_IMAGE_TAG=v1.3.0
+export MONITOR_IMAGE_TAG=v1.3.0
 docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 ```
 
 Workflow публикует образы только при push Git-тега `v*`; push в ветки запускает проверки, но не публикацию. Для точного выбора можно вместо version tag указать `sha-<полный-git-sha>`. Compose требует явно задать обе переменные и не использует подвижные branch-теги. Выполняйте `pull` перед первым запуском и после смены тега. Конфигурация с credentials остаётся в `deploy/loader/config.yaml`, отдельно от образа; checkpoint хранится в постоянном volume.
+
+#### UID и GID контейнеров
+
+Compose задаёт пользователю loader и monitor значения `LOADER_UID:LOADER_GID`. Это позволяет читать file-backed secrets с правами `600` и работать с checkpoint volume. Если переменные не заданы, Compose использует `1000:1000`: на Linux с таким UID/GID экспорт необязателен; если значения отличаются, задайте UID/GID владельца файлов и используйте их при последующих запусках с тем же volume. Сначала настройте права на конфиги, например `chmod 600 deploy/loader/config.yaml rdf_store_monitor/.env`, затем перед командами Compose выполните в Linux, macOS или WSL:
+
+```bash
+export LOADER_UID="$(id -u)"
+export LOADER_GID="$(id -g)"
+```
+
+На Windows запускайте эти команды из WSL (в PowerShell `id` обычно отсутствует). Используйте те же UID/GID при каждом обновлении или перезапуске сервисов: смена пользователя может лишить контейнер доступа к уже созданному checkpoint volume. Если `id -u` и `id -g` оба возвращают `1000`, явный экспорт просто совпадает со значениями Compose по умолчанию.
+
+#### Запуск опубликованных контейнеров
+
+После настройки `deploy/loader/config.yaml`, `rdf_store_monitor/.env`, Docker-сети RDF-хранилища и внешнего checkpoint volume запустите оба сервиса:
+
+```bash
+docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d
+docker compose -p semantic_bi -f deploy/loader/compose.yaml ps
+docker compose -p semantic_bi -f deploy/loader/compose.yaml logs -f loader monitor
+```
+
+Монитор слушает `http://127.0.0.1:8080`. Для конфигурации Fuseki Compose ожидает сеть `fuseki_default`; для GraphDB задайте `RDF_DOCKER_NETWORK` с именем сети GraphDB перед командами. Имена volume и сети в Compose объявлены внешними, поэтому они должны существовать до запуска.
 
 ### 5. Проверить один цикл
 
