@@ -94,15 +94,46 @@ export LOADER_GID="$(id -g)"
 
 #### Запуск опубликованных контейнеров
 
-После настройки `deploy/loader/config.yaml`, `rdf_store_monitor/.env`, Docker-сети RDF-хранилища и внешнего checkpoint volume запустите оба сервиса:
+На чистом сервере, из корня checkout, создайте локальные файлы конфигурации. Не выполняйте `cp`, если файлы уже настроены: команда перезапишет их примерами.
 
 ```bash
+umask 077
+cp deploy/loader/config.example.yaml deploy/loader/config.yaml
+cp rdf_store_monitor/.env.example rdf_store_monitor/.env
+chmod 600 deploy/loader/config.yaml rdf_store_monitor/.env
+```
+
+Заполните оба файла. В loader config укажите S3 credentials и backend. В `.env` монитора укажите S3 credentials и адрес RDF-хранилища, доступный из Docker-сети (не `127.0.0.1` контейнера); установите `LOADER_STATUS_PATH=/var/lib/semantic-bi/status.json`. Убедитесь, что Docker-сеть RDF-хранилища существует. Fuseki-сеть по умолчанию — `fuseki_default`; для GraphDB задайте `RDF_DOCKER_NETWORK` равным имени его сети. Compose использует внешний volume `semantic_bi_loader_state_migrated`: если это новая установка без checkpoint, создайте пустой volume; для продолжения существующей загрузки используйте уже имеющийся volume с checkpoint.
+
+Пример полного запуска для последнего Git-тега этого checkout (`v1.3.0`). Используйте этот тег, если он есть в GHCR и workflow его публикации завершился успешно; иначе подставьте опубликованный тег со страницы пакета. Следующие команды рассчитаны на Linux/macOS/WSL:
+
+```bash
+# GHCR packages закрыты: токен должен иметь read:packages.
+read -rsp 'GitHub token: ' GHCR_TOKEN; echo
+printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u ВАШ_GITHUB_ЛОГИН --password-stdin
+unset GHCR_TOKEN
+
+export LOADER_IMAGE_TAG=v1.3.0
+export MONITOR_IMAGE_TAG=v1.3.0
+export LOADER_UID="$(id -u)"
+export LOADER_GID="$(id -g)"
+
+# Только для новой установки без существующего checkpoint:
+docker volume create semantic_bi_loader_state_migrated
+
+docker compose -p semantic_bi -f deploy/loader/compose.yaml pull
 docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d
 docker compose -p semantic_bi -f deploy/loader/compose.yaml ps
 docker compose -p semantic_bi -f deploy/loader/compose.yaml logs -f loader monitor
 ```
 
-Монитор слушает `http://127.0.0.1:8080`. Для конфигурации Fuseki Compose ожидает сеть `fuseki_default`; для GraphDB задайте `RDF_DOCKER_NETWORK` с именем сети GraphDB перед командами. Имена volume и сети в Compose объявлены внешними, поэтому они должны существовать до запуска.
+UID/GID задают пользователя, от имени которого работают оба контейнера. Compose по умолчанию использует `1000:1000`: если `id -u` и `id -g` равны 1000, экспорт можно опустить; иначе подставьте UID/GID пользователя, которому принадлежат конфиги и checkpoint. Оставляйте те же значения при последующих перезапусках с этим volume. В Windows запускайте пример из WSL; в PowerShell команды `id` нет.
+
+Монитор слушает `http://127.0.0.1:8080`. Остановить оба контейнера, сохранив checkpoint:
+
+```bash
+docker compose -p semantic_bi -f deploy/loader/compose.yaml down
+```
 
 ### 5. Проверить один цикл
 
