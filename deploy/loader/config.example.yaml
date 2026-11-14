@@ -1,0 +1,41 @@
+s3:
+  bucket: "your-bucket"
+  portal_id: "garpix-bitrix24-ru"
+  endpoint_url: "https://storage.yandexcloud.net"
+  region: "ru-central1"
+  access_key: "YOUR_S3_ACCESS_KEY_ID"
+  secret_key: "YOUR_S3_SECRET_ACCESS_KEY"
+mapping:
+  registry_path: "/app/mappings/bitrix24/registry.json"
+  schemas_root: "/app/mappings/bitrix24"
+checkpoint:
+  path: "/var/lib/semantic-bi/state.sqlite3"
+  # strict downloads and SHA-256 checks every event; fast skips event bodies
+  # only when the checkpoint already contains the exact manifest event.
+  resume_mode: strict
+contract_v2_limits:
+  max_chain_length: 10000
+  max_objects_per_run: 1000000
+  max_state_bytes: 1048576
+  max_manifest_bytes: 134217728
+  max_event_bytes: 16777216
+  max_objects_per_cycle: 1000000
+  max_cycle_read_seconds: 3600
+  s3_read_timeout_seconds: 60
+backend: fuseki
+fuseki:
+  url: "http://host.docker.internal:3030/cccr"
+  username: ""
+  password: ""
+  timeout_seconds: 90
+  graph_namespace: "urn:bitrix24:entity"
+# For GraphDB, set backend: graphdb and use a separate checkpoint path/volume.
+# graphdb:
+#   url: "http://graphdb:7200"
+#   repository: "your-repository"
+#   username: ""
+#   password: ""
+#   timeout_seconds: 90
+#   graph_namespace: "urn:bitrix24:entity"
+snapshot_reconcile_entity_types: [deal, user, category, stage, source]
+poll_interval_seconds: 60

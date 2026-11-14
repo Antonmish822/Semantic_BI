@@ -1,0 +1,73 @@
+{
+  "description": {
+    "context": {
+      "subject": {
+        "compute": {
+          "xquery": "/json/object/deal_categories/item | /json/object[ID]"
+        }
+      }
+    },
+    "about": {
+      "compute": {
+        "xquery": "concat('https://example.org/bitrix24/category/', ID/text())"
+      }
+    },
+    "properties": [
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:name"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "NAME/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:createdAt"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "CREATED_DATE/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:sort"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "SORT/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:locked"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "IS_LOCKED/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:isDefault"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "IS_DEFAULT/text()"
+          }
+        }
+      }
+    ]
+  }
+}

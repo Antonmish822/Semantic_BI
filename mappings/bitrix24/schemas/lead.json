@@ -1,0 +1,209 @@
+{
+  "description": {
+    "context": {
+      "subject": {
+        "compute": {
+          "xquery": "/json/object"
+        }
+      }
+    },
+    "about": {
+      "compute": {
+        "xquery": "concat('https://example.org/bitrix24/lead/', ID/text())"
+      }
+    },
+    "properties": [
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:title"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "TITLE/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:createdAt"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "DATE_CREATE/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:modifiedAt"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "DATE_MODIFY/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:movedAt"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "MOVED_TIME/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:closedAt"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "DATE_CLOSED/text()"
+          }
+        },
+        "datatype": "http://www.w3.org/2001/XMLSchema#dateTime"
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:statusCode"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "STATUS_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:statusSemantic"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "STATUS_SEMANTIC_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:sourceCode"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "SOURCE_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:sourceDescription"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "SOURCE_DESCRIPTION/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:utmSource"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "UTM_SOURCE/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:utmMedium"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "UTM_MEDIUM/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:utmCampaign"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "UTM_CAMPAIGN/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:utmContent"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "UTM_CONTENT/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:utmTerm"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "UTM_TERM/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:originatorId"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "ORIGINATOR_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:originId"
+        },
+        "literal": {
+          "compute": {
+            "xquery": "ORIGIN_ID/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:assignedTo"
+        },
+        "URI": {
+          "compute": {
+            "xquery": "concat('https://example.org/bitrix24/user/', ASSIGNED_BY_ID/text())"
+          }
+        }
+      }
+    ]
+  }
+}

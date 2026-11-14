@@ -1,0 +1,43 @@
+services:
+  backup:
+    image: "ghcr.io/antonmish822/semantic-bi-loader:${LOADER_IMAGE_TAG:?Set LOADER_IMAGE_TAG to a release or SHA tag}"
+    platform: linux/amd64
+    # Fuseki creates its N-Quads archives as mode 0600 owned by UID 100.
+    # Root is confined to this short-lived, read-only-root backup container;
+    # the CLI returns generated package ownership to BACKUP_OUTPUT_UID/GID.
+    user: "0:0"
+    cap_drop: [ALL]
+    cap_add: [DAC_OVERRIDE, CHOWN]
+    profiles: ["backup"]
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    entrypoint: ["python", "-m", "pipelines.backup.cli"]
+    command: ["--config", "/run/secrets/loader_config", "create", "--output", "/backups"]
+    secrets:
+      - loader_config
+    environment:
+      BACKUP_OUTPUT_UID: "${LOADER_UID:-1000}"
+      BACKUP_OUTPUT_GID: "${LOADER_GID:-1000}"
+    volumes:
+      - loader_state:/var/lib/semantic-bi
+      - "${FUSEKI_BACKUP_DIR:?Set FUSEKI_BACKUP_DIR to the host Fuseki BASE/backups directory}:/fuseki/backups:ro"
+      - "${FUSEKI_PACKAGE_DIR:-./backups/fuseki}:/backups"
+    networks:
+      - default
+      - fuseki
+
+secrets:
+  loader_config:
+    file: ./config.yaml
+
+volumes:
+  loader_state:
+    external: true
+    name: semantic_bi_loader_state_migrated
+
+networks:
+  fuseki:
+    external: true
+    name: ${FUSEKI_DOCKER_NETWORK:-fuseki_default}

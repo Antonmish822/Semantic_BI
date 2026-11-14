@@ -1,0 +1,21 @@
+@prefix rep: <http://www.openrdf.org/config/repository#> .
+@prefix sr: <http://www.openrdf.org/config/repository/sail#> .
+@prefix sail: <http://www.openrdf.org/config/sail#> .
+@prefix graphdb: <http://www.ontotext.com/config/graphdb#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+[] a rep:Repository ;
+  rep:repositoryID "fuseki_migration_monitor" ;
+  rep:repositoryTitle "fuseki_migration_monitor" ;
+  rep:repositoryImpl [
+    rep:repositoryType "graphdb:SailRepository" ;
+    sr:sailImpl [
+      sail:sailType "graphdb:Sail" ;
+      graphdb:ruleset "rdfsplus-optimized" ;
+      graphdb:enableContextIndex "true"^^xsd:boolean ;
+      graphdb:enablePredicateList "true"^^xsd:boolean ;
+      graphdb:enableLiteralIndex "true"^^xsd:boolean ;
+      graphdb:enableFtsIndex "false"^^xsd:boolean ;
+      graphdb:base-URL "http://example.org/owlim#"
+    ]
+  ] .
