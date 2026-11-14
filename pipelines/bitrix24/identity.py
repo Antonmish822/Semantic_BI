@@ -1,7 +1,7 @@
 from __future__ import annotations
 import hashlib
 from urllib.parse import quote
-SUPPORTED_ENTITIES = {"deal", "activity", "user", "category", "stage", "source"}
+SUPPORTED_ENTITIES = {"deal", "activity", "lead", "user", "category", "stage", "source"}
 
 def entity_graph_uri(namespace: str, entity_key: str) -> str:
     parts = entity_key.split("/", 2)

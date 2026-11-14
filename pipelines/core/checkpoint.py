@@ -41,6 +41,11 @@ class Checkpoint:
                 created_at TEXT,
                 mode TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS applied_backfills (
+                manifest_key TEXT PRIMARY KEY,
+                manifest_sha256 TEXT NOT NULL,
+                applied_at TEXT NOT NULL
+            );
         """)
         columns = {row[1] for row in self.db.execute("PRAGMA table_info(entities)")}
         for name, sql_type in (("source_key", "TEXT"), ("sha256", "TEXT"), ("mapping_version", "TEXT")):
@@ -128,6 +133,20 @@ class Checkpoint:
         with self.db:
             self.db.execute("INSERT OR IGNORE INTO runs(run_id,manifest_key,created_at,mode) VALUES(?,?,?,?)",
                             (run_id, manifest_key, created_at, mode))
+
+    def save_backfill(self, manifest_key: str, manifest_sha256: str, applied_at: str) -> None:
+        with self.db:
+            old = self.db.execute("SELECT manifest_sha256 FROM applied_backfills WHERE manifest_key=?",
+                                  (manifest_key,)).fetchone()
+            if old and old["manifest_sha256"] != manifest_sha256:
+                raise RuntimeError("Backfill manifest key was already applied with a different SHA-256")
+            self.db.execute("INSERT OR IGNORE INTO applied_backfills VALUES (?,?,?)",
+                            (manifest_key, manifest_sha256, applied_at))
+
+    def backfill_sha(self, manifest_key: str) -> str | None:
+        row = self.db.execute("SELECT manifest_sha256 FROM applied_backfills WHERE manifest_key=?",
+                              (manifest_key,)).fetchone()
+        return row["manifest_sha256"] if row else None
 
     def save_v2_run(self, run_id: str, manifest_key: str, created_at: str | None,
                     mode: str, epoch_id: str, manifest_sha256: str) -> None:

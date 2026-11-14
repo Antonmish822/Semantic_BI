@@ -11,8 +11,8 @@ from unittest.mock import patch
 
 from pipelines.bitrix24.config import load_config
 from pipelines.bitrix24.identity import entity_graph_uri
-from pipelines.bitrix24.v2.protocol import canonical_json, sha256, validate_event, object_json
-from pipelines.bitrix24.v2.runner import run_cycle_v2
+from pipelines.bitrix24.v2.protocol import canonical_json, sha256, validate_event, object_json, serialize_event
+from pipelines.bitrix24.v2.runner import run_cycle_v2, apply_backfill_manifest
 from pipelines.bitrix24.prepare_v2_checkpoint import prepare
 from pipelines.core.checkpoint import Checkpoint
 
@@ -107,6 +107,54 @@ def make_config(tmp, fast=False):
 
 
 class LoaderV2Tests(unittest.TestCase):
+    def test_legacy_six_count_manifest_is_accepted_after_lead_addition(self):
+        from pipelines.bitrix24.v2.protocol import validate_manifest
+        manifest = make_manifest('20261113T120000Z-oldcounts', 'incremental',
+                                 'local-20261113T080000Z-old', [])
+        manifest['counts'].pop('lead')
+        self.assertTrue(validate_manifest(manifest, 'bitrix24/portal-test/'))
+
+    def test_explicit_lead_backfill_verifies_sha_replays_and_never_rolls_back_newer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg, objects = make_config(tmp), {}
+            portal = 'portal-test'
+            event = serialize_event(portal, 'lead', {'ID': '81', 'TITLE': 'synthetic lead',
+                'DATE_CREATE': '2026-09-01T00:00:00Z', 'DATE_MODIFY': '2026-11-13T09:00:00Z'})
+            ref = put_event(objects, portal, event)
+            run_id = '20261113T120001Z-leadbackfill'
+            manifest = make_manifest(run_id, 'backfill', 'local-20261113T080000Z-base', [ref])
+            manifest['counts'] = {'lead': 1}
+            key, digest = add_manifest(objects, manifest)
+            cp = Checkpoint(cfg.checkpoint_path); cp.bind_store_v2('fuseki', 'isolated')
+            rdf = MemoryRdf()
+            try:
+                with patch('pipelines.bitrix24.v2.runner.transform_event', return_value=b'<rdf/>'):
+                    result = apply_backfill_manifest(MemoryS3(objects), cfg, cp, [], rdf, key, digest)
+                    self.assertFalse(result['already_applied'])
+                    self.assertEqual(len(rdf.calls), 1)
+                    cp.save_entity('portal-test/lead/81', entity_graph_uri(cfg.graph_namespace, 'portal-test/lead/81'),
+                                   'newer-event', '2026-11-13T10:00:00Z', False, 'newer-key', 'b'*64, 'map')
+                    replay = apply_backfill_manifest(MemoryS3(objects), cfg, cp, [], rdf, key, digest)
+                self.assertTrue(replay['already_applied'])
+                self.assertEqual(len(rdf.calls), 1)
+                self.assertEqual(cp.backfill_sha(key), digest)
+                with self.assertRaisesRegex(ValueError, 'SHA-256 манифеста'):
+                    apply_backfill_manifest(MemoryS3(objects), cfg, cp, [], rdf, key, 'f'*64)
+            finally: cp.close()
+
+    def test_lead_and_deal_with_same_id_have_distinct_entity_graphs(self):
+        self.assertNotEqual(entity_graph_uri('urn:test', 'portal-test/deal/81'),
+                            entity_graph_uri('urn:test', 'portal-test/lead/81'))
+
+    def test_activity_bindings_are_preserved_in_mapping_xml(self):
+        from pipelines.bitrix24.mapper import event_to_xml
+        payload = {'ID': '7', 'OWNER_ID': '81', 'OWNER_TYPE_ID': '1'}
+        xml = event_to_xml({'payload': payload, 'bindings': [
+            {'entityTypeId': 1, 'entityId': 81}, {'entityTypeId': 2, 'entityId': 81}]})
+        self.assertIn('<entityTypeId>1</entityTypeId>', xml)
+        self.assertIn('<entityTypeId>2</entityTypeId>', xml)
+        self.assertIn('<entityId>81</entityId>', xml)
+
     def test_independent_exporter_control_vectors(self):
         fixture = ROOT / "tests/bitrix24/v2/fixtures/exporter_control_vectors_copy.json"
         for vector in json.loads(fixture.read_text(encoding="utf-8"))["vectors"]:

@@ -203,6 +203,17 @@
             "xquery": "concat('https://example.org/bitrix24/user/', LAST_ACTIVITY_BY/text())"
           }
         }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:originLead"
+        },
+        "URI": {
+          "compute": {
+            "xquery": "if (LEAD_ID/text() != '') then concat('https://example.org/bitrix24/lead/', LEAD_ID/text()) else ()"
+          }
+        }
       }
     ]
   }

@@ -36,6 +36,11 @@ def event_to_xml(event: dict[str, Any]) -> str:
     record = ET.SubElement(root, "object")
     for field, value in payload.items():
         append_xml_value(record, field, value)
+    bindings = ET.SubElement(record, "bindings")
+    for binding in event.get("bindings") or []:
+        item = ET.SubElement(bindings, "item")
+        append_xml_value(item, "entityTypeId", binding.get("entityTypeId"))
+        append_xml_value(item, "entityId", binding.get("entityId"))
     ET.indent(root, space="  ")
     return ET.tostring(root, encoding="utf-8", xml_declaration=True).decode("utf-8")
 

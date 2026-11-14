@@ -11,6 +11,7 @@ from ..identity import SUPPORTED_ENTITIES, entity_graph_uri
 from ..mapper import mapping_fingerprint, transform_event
 from .protocol import (canonical_json, object_json, sha256, validate_event,
                        validate_manifest, validate_state)
+from ..source import is_stale
 
 LOG = logging.getLogger("rdf_sync")
 
@@ -161,6 +162,9 @@ def _apply_ref(s3, config, checkpoint, mappings, ref, mapping_version, store, de
     event, entity_key, actual_sha = _verify_ref(s3, config, ref, deadline)
     graph_uri = entity_graph_uri(config.graph_namespace, entity_key)
     previous = checkpoint.get_entity(entity_key)
+    if previous and is_stale(event.get("source_modified_at"), previous["source_modified_at"]):
+        LOG.info("Пропущена более старая версия события для %s", entity_key)
+        return entity_key
     if (previous and previous["source_key"] == key and previous["sha256"] == actual_sha
             and previous["event_id"] == event["event_id"]
             and previous["graph_uri"] == graph_uri
@@ -225,8 +229,9 @@ def _reproject_active(s3, config, checkpoint, mappings, mapping_version, store, 
             _apply_ref(s3, config, checkpoint, mappings, ref, mapping_version, store, deadline)
         except ClientError as exc:
             code = str((exc.response.get("Error") or {}).get("Code", ""))
-            if code in {"NoSuchKey", "404", "NotFound"} and parts[0] == "activity":
-                LOG.error("Перепроекция остановлена: исходное activity событие вышло из retention")
+            if code in {"NoSuchKey", "404", "NotFound"}:
+                LOG.warning("Событие %s недоступно для перепроекции; существующий RDF граф сохранён", key)
+                continue
             raise RuntimeError("Перепроекция остановлена: исходный v2 объект недоступен") from exc
 
 
@@ -279,3 +284,31 @@ def run_cycle_v2(s3, config, checkpoint, mappings, store, state=None, deadline=N
     checkpoint.set_meta("observed_state_sha256", state_sha)
     checkpoint.set_meta("mapping_version", mapping_version)
     return state
+
+
+def apply_backfill_manifest(s3, config, checkpoint, mappings, store,
+                            manifest_key: str, manifest_sha256: str) -> dict:
+    """Explicitly apply one verified lead-only backfill, outside the v2 chain."""
+    if not manifest_key.startswith(config.runs_prefix) or not manifest_key.endswith("/manifest.json"):
+        raise ValueError("Backfill manifest key is outside the configured runs prefix")
+    manifest, digest = _manifest(s3, config, manifest_key, manifest_sha256)
+    if manifest["mode"] != "backfill":
+        raise ValueError("Explicit backfill command requires mode=backfill")
+    if manifest_key != f"{config.runs_prefix}{manifest['run_id']}/manifest.json":
+        raise ValueError("Backfill manifest key does not match run_id")
+    if any(ref["entity"] != "lead" for ref in manifest["objects"]):
+        raise ValueError("Backfill manifest may contain lead objects only")
+    if set(manifest["counts"]) - {"lead"} or manifest["counts"].get("lead", 0) != len(manifest["objects"]):
+        raise ValueError("Backfill counts do not match lead-only objects")
+    old_sha = checkpoint.backfill_sha(manifest_key)
+    if old_sha is not None and old_sha != digest:
+        raise RuntimeError("Backfill manifest key was already applied with a different SHA-256")
+    for ref in manifest["objects"]:
+        # Always revalidate S3 objects on explicit replay; stale protection prevents rollback.
+        _apply_ref(s3, config, checkpoint, mappings, ref,
+                   mapping_fingerprint(config, mappings), store)
+    checkpoint.save_backfill(manifest_key, digest, manifest.get("created_at") or "")
+    checkpoint.save_run(manifest["run_id"], manifest_key, manifest.get("created_at"), "backfill")
+    return {"run_id": manifest["run_id"], "manifest_key": manifest_key,
+            "manifest_sha256": digest, "objects": len(manifest["objects"]),
+            "already_applied": old_sha == digest}

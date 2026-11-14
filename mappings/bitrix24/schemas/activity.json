@@ -119,7 +119,7 @@
         },
         "URI": {
           "compute": {
-            "xquery": "concat('https://example.org/bitrix24/deal/', OWNER_ID/text())"
+            "xquery": "if (OWNER_TYPE_ID/text() = '1') then concat('https://example.org/bitrix24/lead/', OWNER_ID/text()) else if (OWNER_TYPE_ID/text() = '2') then concat('https://example.org/bitrix24/deal/', OWNER_ID/text()) else ()"
           }
         }
       },
@@ -176,6 +176,28 @@
         "literal": {
           "compute": {
             "xquery": "PRIORITY/text()"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:bindingLead"
+        },
+        "URI": {
+          "compute": {
+            "xquery": "for $b in bindings/item[entityTypeId/text() = '1'] return concat('https://example.org/bitrix24/lead/', $b/entityId/text())"
+          }
+        }
+      },
+      {
+        "QName": {
+          "NameSpace": "https://example.org/bitrix24#",
+          "PrefixedName": "b24:bindingDeal"
+        },
+        "URI": {
+          "compute": {
+            "xquery": "for $b in bindings/item[entityTypeId/text() = '2'] return concat('https://example.org/bitrix24/deal/', $b/entityId/text())"
           }
         }
       }

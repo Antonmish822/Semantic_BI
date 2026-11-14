@@ -96,6 +96,8 @@ def load_config(path: Path) -> Config:
     unknown = reconcile - SUPPORTED_ENTITIES
     if unknown:
         raise ValueError(f"Неизвестные типы в snapshot_reconcile_entity_types: {sorted(unknown)}")
+    if "lead" in reconcile:
+        raise ValueError("lead нельзя сверять как полный snapshot: initial backfill ограничен 90 днями")
 
     return Config(
         bucket=s3["bucket"], portal_id=str(s3["portal_id"]),

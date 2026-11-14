@@ -6,6 +6,12 @@
     "match": "fullmatch"
   },
   {
+    "_comment": "Bitrix24 leads (schema v4 payload JSON)",
+    "manifest": "schemas/lead.json",
+    "pattern": "^lead/[^/]+/[^/]+\\.json$",
+    "match": "fullmatch"
+  },
+  {
     "_comment": "Bitrix24 activity events (schema v3/v4 payload JSON)",
     "manifest": "schemas/activity.json",
     "pattern": "^activity/[^/]+/[^/]+\\.json$",

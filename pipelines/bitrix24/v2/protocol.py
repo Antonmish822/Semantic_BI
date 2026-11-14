@@ -112,9 +112,12 @@ def validate_manifest(manifest: dict[str, Any], portal_prefix: str) -> None:
                              or not isinstance(prev_sha, str) or not HEX.fullmatch(prev_sha)):
         raise ValueError("Некорректная ссылка предыдущего incremental")
     counts = manifest.get("counts")
-    if not isinstance(counts, dict) or set(counts) != set(SUPPORTED_ENTITIES):
-        raise ValueError("counts должны содержать шесть типов сущностей")
-    if any(type(counts[e]) is not int or counts[e] < 0 for e in SUPPORTED_ENTITIES):
+    allowed_count_keys = (set(SUPPORTED_ENTITIES), set(SUPPORTED_ENTITIES) - {"lead"})
+    if mode == "backfill":
+        allowed_count_keys += ({"lead"},)
+    if not isinstance(counts, dict) or set(counts) not in allowed_count_keys:
+        raise ValueError("counts должны содержать поддерживаемые типы; старые манифесты могут не содержать lead")
+    if any(type(counts.get(e, 0)) is not int or counts.get(e, 0) < 0 for e in SUPPORTED_ENTITIES):
         raise ValueError("counts должны быть неотрицательными целыми числами")
     refs = manifest.get("objects")
     if not isinstance(refs, list):
@@ -135,7 +138,7 @@ def validate_manifest(manifest: dict[str, Any], portal_prefix: str) -> None:
             raise ValueError("Ключ или graph_id ссылки не соответствует порталу")
         seen.add(key)
         actual[entity] += 1
-    if any(counts[e] != actual[e] for e in SUPPORTED_ENTITIES):
+    if any(counts.get(e, 0) != actual[e] for e in SUPPORTED_ENTITIES):
         raise ValueError("counts манифеста не совпадают с objects")
     if manifest.get("status") != "complete":
         raise ValueError("Манифест не complete")
@@ -143,7 +146,7 @@ def validate_manifest(manifest: dict[str, Any], portal_prefix: str) -> None:
         complete = manifest.get("complete_entity_types")
         if manifest.get("complete") is not True or not isinstance(complete, list):
             raise ValueError("Snapshot не объявлен полным")
-        allowed = set(SUPPORTED_ENTITIES) - {"activity"}
+        allowed = set(SUPPORTED_ENTITIES) - {"activity", "lead"}
         if any(e not in allowed for e in complete) or len(set(complete)) != len(complete):
             raise ValueError("Недопустимый complete_entity_types")
         for field in ("t0", "catchup_to", "activity_from"):
