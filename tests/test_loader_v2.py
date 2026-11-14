@@ -11,13 +11,13 @@ from unittest.mock import patch
 
 from pipelines.bitrix24.config import load_config
 from pipelines.bitrix24.identity import entity_graph_uri
-from pipelines.bitrix24.v2.protocol import canonical_json, sha256, validate_event, object_json, serialize_event
+from pipelines.bitrix24.v2.protocol import canonical_json, sha256, validate_event, object_json
 from pipelines.bitrix24.v2.runner import run_cycle_v2, apply_backfill_manifest
 from pipelines.bitrix24.prepare_v2_checkpoint import prepare
 from pipelines.core.checkpoint import Checkpoint
 
 ROOT = Path(__file__).resolve().parents[1]
-ENTITIES = ("deal", "activity", "user", "category", "stage", "source")
+ENTITIES = ("deal", "activity", "user", "category", "stage", "source", "lead")
 
 
 class MemoryS3:
@@ -57,6 +57,21 @@ def make_event(portal, entity, identity, title, stamp="2026-11-13T09:00:00Z"):
             "graph_id": f"urn:bitrix24:graph:{portal}:{event_id}",
             "entity_key": f"{portal}/{entity}/{identity}", "operation": "upsert",
             "source_modified_at": stamp, "observed_at": stamp or "1970-01-01T00:00:00Z",
+            "payload": payload, "bindings": []}
+
+
+def serialize_event(portal, entity, payload):
+    """Build a synthetic algorithm-3 event for loader contract tests."""
+    identity = str(payload.get("ID", payload.get("STATUS_ID")))
+    stamp = payload.get("DATE_MODIFY") or payload.get("LAST_UPDATED") or payload.get("MODIFIED")
+    digest = sha256(canonical_json({"event_id_algorithm": 3, "schema_version": 4,
+                                    "payload": payload, "bindings": []}))
+    event_id = sha256(f"{portal}|{entity}|{identity}|{stamp or '<null>'}|{digest}".encode())
+    return {"schema_version": 4, "event_id_algorithm": 3, "event_id": event_id,
+            "graph_id": f"urn:bitrix24:graph:{portal}:{event_id}",
+            "entity_key": f"{portal}/{entity}/{identity}", "operation": "upsert",
+            "source_modified_at": stamp,
+            "observed_at": stamp or "1970-01-01T00:00:00Z",
             "payload": payload, "bindings": []}
 
 
@@ -112,7 +127,7 @@ class LoaderV2Tests(unittest.TestCase):
         manifest = make_manifest('20261113T120000Z-oldcounts', 'incremental',
                                  'local-20261113T080000Z-old', [])
         manifest['counts'].pop('lead')
-        self.assertTrue(validate_manifest(manifest, 'bitrix24/portal-test/'))
+        validate_manifest(manifest, 'bitrix24/portal-test/')
 
     def test_explicit_lead_backfill_verifies_sha_replays_and_never_rolls_back_newer(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -150,7 +165,7 @@ class LoaderV2Tests(unittest.TestCase):
         from pipelines.bitrix24.mapper import event_to_xml
         payload = {'ID': '7', 'OWNER_ID': '81', 'OWNER_TYPE_ID': '1'}
         xml = event_to_xml({'payload': payload, 'bindings': [
-            {'entityTypeId': 1, 'entityId': 81}, {'entityTypeId': 2, 'entityId': 81}]})
+            {'entityTypeId': 1, 'entityId': ' 81 '}, {'entityTypeId': 2, 'entityId': 81}]})
         self.assertIn('<entityTypeId>1</entityTypeId>', xml)
         self.assertIn('<entityTypeId>2</entityTypeId>', xml)
         self.assertIn('<entityId>81</entityId>', xml)

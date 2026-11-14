@@ -91,7 +91,7 @@ class ConfigTests(unittest.TestCase):
             for backend in ('fuseki','graphdb'):
                 cfg=load_test_config(tmp,backend)
                 self.assertEqual(cfg.backend,backend)
-                self.assertEqual(len(load_mappings(cfg)),6)
+                self.assertEqual(len(load_mappings(cfg)),7)
                 self.assertEqual(cfg.graph_namespace,'urn:bitrix24:entity')
             p=Path(tmp)/'config.yaml'
             p.write_text(config_text('unknown'))
@@ -122,6 +122,36 @@ class ConfigTests(unittest.TestCase):
                         any(child.tag.rsplit('}',1)[-1]==wanted['predicate'] and (child.text or '')==wanted['value']
                             for child in desc)
                         for desc in graph.findall(f'{{{ns}}}Description')))
+
+    @unittest.skipUnless(importlib.util.find_spec('cccr_py'), 'native CCCR unavailable')
+    def test_synthetic_lead_deal_and_activity_mappings(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg=load_test_config(tmp)
+            mappings=load_mappings(cfg)
+
+            lead={'ID':'81','TITLE':'Synthetic lead','DATE_CREATE':'2026-09-01T00:00:00Z',
+                  'DATE_MODIFY':'2026-11-13T09:00:00Z','STATUS_ID':'NEW',
+                  'STATUS_SEMANTIC_ID':'P','SOURCE_ID':'WEB','UTM_SOURCE':'synthetic'}
+            lead_rdf=transform_event(cfg,mappings,{'payload':lead},'lead/81/event.json')
+            self.assertIn(b'https://example.org/bitrix24/lead/81',lead_rdf)
+
+            deal=json.loads((ROOT/'tests/bitrix24/fixtures/snapshot-2026-11-04/deal.json').read_text())
+            deal['LEAD_ID']='81'
+            deal_rdf=transform_event(cfg,mappings,{'payload':deal},'deal/900001/event.json')
+            self.assertIn(b'https://example.org/bitrix24/lead/81',deal_rdf)
+            del deal['LEAD_ID']
+            deal_without_lead=transform_event(cfg,mappings,{'payload':deal},'deal/900001/event.json')
+            self.assertNotIn(b'https://example.org/bitrix24/lead/',deal_without_lead)
+
+            activity={'ID':'7','SUBJECT':'Synthetic activity','OWNER_ID':'81','OWNER_TYPE_ID':'1',
+                      'TYPE_ID':'2','PROVIDER_ID':'EMAIL','LAST_UPDATED':'2026-11-13T09:30:00Z'}
+            activity_rdf=transform_event(cfg,mappings,{'payload':activity,'bindings':[
+                {'entityTypeId':1,'entityId':81},{'entityTypeId':2,'entityId':81},
+                {'entityTypeId':2,'entityId':82}]},
+                'activity/7/event.json')
+            self.assertIn(b'https://example.org/bitrix24/lead/81',activity_rdf)
+            self.assertIn(b'https://example.org/bitrix24/deal/81',activity_rdf)
+            self.assertIn(b'https://example.org/bitrix24/deal/82',activity_rdf)
 
     def test_uri_matches_legacy_namespace(self):
         key='portal-a/deal/42'

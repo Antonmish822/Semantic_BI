@@ -1,0 +1,25 @@
+@prefix b24:  <https://example.org/bitrix24#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<urn:bitrix24:ontology:activity-classification>
+    a owl:Ontology ;
+    rdfs:label "Bitrix24 activity classification"@en ;
+    rdfs:comment "Classifies resources carrying both activity-specific data properties."@en .
+
+b24:Activity a owl:Class ;
+    rdfs:label "Activity"@en .
+
+b24:typeId a owl:DatatypeProperty .
+b24:provider a owl:DatatypeProperty .
+
+[] a owl:Class ;
+    owl:intersectionOf (
+        [ a owl:Restriction ;
+          owl:onProperty b24:typeId ;
+          owl:someValuesFrom rdfs:Literal ]
+        [ a owl:Restriction ;
+          owl:onProperty b24:provider ;
+          owl:someValuesFrom rdfs:Literal ]
+    ) ;
+    rdfs:subClassOf b24:Activity .
