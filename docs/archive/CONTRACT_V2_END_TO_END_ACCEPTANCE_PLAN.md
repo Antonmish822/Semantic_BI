@@ -2,15 +2,15 @@
 
 Статус: план, проверки по нему ещё не засвидетельствованы. Это этап 7
 [плана загрузчика](LOADER_CONTRACT_V2_IMPLEMENTATION_PLAN.md) и этап 7
-[плана экспортёра](../../bitrix24_s3_export/docs/EXPORTER_V2_IMPLEMENTATION_PLAN.md).
+[плана экспортёра](../../../bitrix24_s3_export/docs/EXPORTER_V2_IMPLEMENTATION_PLAN.md).
 Следующий шаг после подписанного отчёта — контролируемое переключение по
-[runbook экспортёра](../../bitrix24_s3_export/docs/CONTRACT_V2_CUTOVER_RUNBOOK.md)
-и [runbook загрузчика](LOADER_CONTRACT_V2_RUNBOOK.md).
+[runbook экспортёра](../../../bitrix24_s3_export/docs/CONTRACT_V2_CUTOVER_RUNBOOK.md)
+и [runbook загрузчика](../LOADER_CONTRACT_V2_RUNBOOK.md).
 Нормативные поля и алгоритмы определяет
-[контракт](../../S3_SYNC_CONTRACT_PROPOSAL.md).
+[контракт](../../../S3_SYNC_CONTRACT_PROPOSAL.md).
 Для выделенного тестового Yandex S3 соблюдать
-[инструкцию доступа](../../bitrix24_s3_export/docs/AI_AGENT_YANDEX_S3_ACCESS.md)
-и [инструкцию синтетической S3-приёмки](../../bitrix24_s3_export/docs/AI_AGENT_S3_E2E_ACCEPTANCE.md).
+[инструкцию доступа](../../../bitrix24_s3_export/docs/AI_AGENT_YANDEX_S3_ACCESS.md)
+и [инструкцию синтетической S3-приёмки](../../../bitrix24_s3_export/docs/AI_AGENT_S3_E2E_ACCEPTANCE.md).
 Конфиг `local-data/s3-v2-test/config.json` по инструкции доступа разрешён
 только для синтетических проверок; не подключать к нему importer. Полный
 прогон загрузчика требует отдельно предоставленного тестового S3-доступа
@@ -47,7 +47,7 @@ payload и секреты в отчёт не включать.
 | Артефакты | Digest образа загрузчика, SHA пакета/образа экспортёра, commit и конфигурация без секретов | владельцы компонентов |
 | Источник тестовых данных | Управляемый тестовый портал или воспроизводимый CRM fixture с сущностями, справочниками и изменениями между запусками | владелец CRM |
 | Полнота snapshot | Подтверждённые scopes и успешная выгрузка всех страниц для каждого типа в `complete_entity_types`; `activity` не включать | владелец CRM/экспортёра |
-| S3 семантика | На целевом *тестовом* endpoint проверить `If-None-Match`, `If-Match`, конкурентный Put, неизвестный ответ и bucket policy по [runbook](../../bitrix24_s3_export/docs/CONTRACT_V2_CUTOVER_RUNBOOK.md#тестовый-бакет) | владелец S3 |
+| S3 семантика | На целевом *тестовом* endpoint проверить `If-None-Match`, `If-Match`, конкурентный Put, неизвестный ответ и bucket policy по [runbook](../../../bitrix24_s3_export/docs/CONTRACT_V2_CUTOVER_RUNBOOK.md#тестовый-бакет) | владелец S3 |
 | Повторяемость | Инструмент сброса только тестового namespace и тестовых RDF/SQLite; зафиксированные исходные данные и ожидаемые изменения | ведущий приёмки |
 | Независимый оракул | Скрипт/процедура чтения опубликованных *сырых* объектов и RDF, не использующая runtime-модули экспортёра/загрузчика | ведущий приёмки |
 
@@ -70,12 +70,12 @@ payload и секреты в отчёт не включать.
    обычного потока, второй — для отстающего потребителя. Не делить checkpoint
    между одновременно запущенными загрузчиками.
 4. Создать конфигурацию загрузчика по
-   [`deploy/loader/config.example.yaml`](../deploy/loader/config.example.yaml):
+   [`deploy/loader/config.example.yaml`](../../deploy/loader/config.example.yaml):
    тестовый S3, выбранный RDF endpoint, отдельный checkpoint,
    `checkpoint.resume_mode: strict`, разрешённые типы reconciliation и лимиты.
    Конфигурация и checkpoint должны находиться вне образа и вне Git.
 5. Для проверки совпадения байтов и формата использовать опубликованные
-   [`contract_v2_test_vectors.json`](../../bitrix24_s3_export/docs/contract_v2_test_vectors.json)
+   [`contract_v2_test_vectors.json`](../../../bitrix24_s3_export/docs/contract_v2_test_vectors.json)
    и независимый расчёт canonical JSON/SHA-256. Записать ожидаемые URI графов,
    набор entity key и контрольные RDF утверждения для тестовых данных.
 6. Перед каждым негативным сценарием сохранить копию **тестовых** S3 объектов,
@@ -172,7 +172,7 @@ revision, base/tip ID и SHA; SHA/тип/число refs каждого мани
 RDF + SQLite в изолированную цель с той же backend/endpoint identity и повторный
 цикл. Сравнить графы и tip после восстановления. Для GraphDB учитывать
 требования работающего экземпляра и совместимой версии из
-[архитектуры backup](BACKUP_RESTORE_ARCHITECTURE.md).
+[архитектуры backup](../BACKUP_RESTORE_ARCHITECTURE.md).
 
 ## 7. Несколько потребителей и переход с v1
 

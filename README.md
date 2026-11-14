@@ -2,19 +2,18 @@
 
 Semantic_BI загружает данные Bitrix24 из S3 в RDF-хранилище и предоставляет их в виде именованных графов для семантической аналитики. Проект преобразует JSON-события экспортёра через CCCR mappings и поддерживает два backend: Apache Jena Fuseki и GraphDB.
 
-Главный компонент — S3→RDF-загрузчик в `pipelines/bitrix24`. `raw_ingest` — отдельный коннектор для получения RAW-данных Bitrix24, а `rdf_store_monitor` — интерфейс чтения данных из выбранного RDF-хранилища (Fuseki или GraphDB).
+Главные компоненты — v2 S3→RDF-загрузчик в `pipelines/bitrix24` и `rdf_store_monitor`, интерфейс чтения данных из выбранного RDF-хранилища (Fuseki или GraphDB).
 
 Требования среды и инструкции запуска загрузчика приведены в [runbook S3 → RDF](docs/SYNC_RUNBOOK.md).
 
 Для оперативного контроля активных сделок, бездействия по сделкам и нагрузки сотрудников есть локальный [CRM Pulse Monitor](../crm_pulse_monitor/README.md) в корне проекта. Он читает repository `bitrix24_v2_parallel` и не изменяет RDF-хранилище.
 
-Для параллельного переноса текущих именованных графов из Fuseki в GraphDB с отдельными загрузчиком, монитором и checkpoint см. [руководство GraphDB-миграции](docs/GRAPHDB_PARALLEL_MIGRATION.md).
+Архивные инструкции по переносу графов из Fuseki в GraphDB: [миграция](docs/archive/GRAPHDB_PARALLEL_MIGRATION.md) и [настройка связки](docs/archive/GRAPHDB_PARALLEL_SETUP_INSTRUCTIONS.md).
 
-Пошаговая команда-инструкция для подготовки repository, экспорта, переноса checkpoint, запуска и проверки отдельной пары контейнеров находится в [инструкции настройки GraphDB-связки](docs/GRAPHDB_PARALLEL_SETUP_INSTRUCTIONS.md).
 
 Краткие правила работы ИИ-агента с GraphDB API собраны в [памятке GraphDB API](docs/GRAPHDB_AGENT_API_GUIDE.md).
 
-Согласованный backup/restore RDF-хранилища и loader checkpoint для GraphDB и Fuseki описан в [архитектуре и инструкции резервного копирования](docs/BACKUP_RESTORE_ARCHITECTURE.md). Инструкция включает онлайн pause barrier и offline-режим для старых образов. Для Fuseki используйте [deploy/fuseki/compose.yaml](deploy/fuseki/compose.yaml) и локальную конфигурацию на основе [config.example.yaml](deploy/fuseki/config.example.yaml).
+Согласованный backup/restore RDF-хранилища и v2 loader checkpoint для GraphDB и Fuseki описан в [архитектуре и инструкции резервного копирования](docs/BACKUP_RESTORE_ARCHITECTURE.md). Она включает онлайн pause barrier и offline-режим. Для Fuseki используйте [deploy/fuseki/compose.yaml](deploy/fuseki/compose.yaml) и локальную конфигурацию на основе [config.example.yaml](deploy/fuseki/config.example.yaml).
 
 Загрузчик поддерживает отдельный consumer путь [контракта S3 v2](docs/LOADER_CONTRACT_V2_RUNBOOK.md); порядок строгой проверки, подготовки checkpoint, backup и выпуска описан в runbook.
 
@@ -24,13 +23,13 @@ Semantic_BI загружает данные Bitrix24 из S3 в RDF-хранил
 
 ### Разовый цикл
 
-Запуск с `--once` выполняет один цикл и завершает процесс. При пустом checkpoint загрузчик применяет принятый полный snapshot, сверяет сущности только для настроенных полных типов и затем догоняет завершённые incremental runs до курсора из `state.json`. Это режим одного цикла, а не отдельный режим «только первичная загрузка».
+Запуск с `--once` выполняет один цикл и завершает процесс. При пустом checkpoint загрузчик применяет полный snapshot v2, сверяет сущности только для настроенных полных типов и применяет доступную цепочку incremental runs до объявленного tip. Это режим одного цикла, а не отдельный режим «только первичная загрузка».
 
 ### Инкрементальная обработка
 
-При последующих циклах загрузчик проверяет состояние snapshot и выбирает incremental manifests после своего checkpoint до верхней границы `state.json`. Он обрабатывает только завершённые запуски с успешным `status.json`, сверяет SHA-256 событий и проверяет их идентичность. `upsert` заменяет граф через Graph Store `PUT`, `delete` удаляет граф. После успешной обработки сущностей и запусков позиции сохраняются в SQLite. Если процесс перезапущен, безопасный повтор продолжает обработку с checkpoint.
+При последующих циклах загрузчик проверяет v2 state и проходит цепочку манифестов по ссылкам и SHA до своего checkpoint. `status.json` служит диагностикой, а не подтверждением запуска. Загрузчик проверяет SHA-256 и идентичность событий; `upsert` заменяет граф через Graph Store `PUT`, `delete` удаляет граф. Позиции сохраняются в SQLite checkpoint. После перезапуска безопасный повтор продолжает обработку с checkpoint.
 
-Без `--once` загрузчик выполняет цикл регулярно с интервалом `poll_interval_seconds`. Подробности контракта и восстановления описаны в [RDF_INTEGRATION.md](docs/RDF_INTEGRATION.md) и [руководстве по загрузке](docs/S3_TO_FUSEKI_LOADING.md); известные ограничения собраны в [reliability backlog](docs/SYNC_RELIABILITY_BACKLOG.md).
+Без `--once` загрузчик выполняет цикл регулярно с интервалом `poll_interval_seconds`. Подробности контракта и восстановления описаны в [RDF_INTEGRATION.md](docs/RDF_INTEGRATION.md) и [runbook контракта v2](docs/LOADER_CONTRACT_V2_RUNBOOK.md); известные ограничения собраны в [reliability backlog](docs/SYNC_RELIABILITY_BACKLOG.md).
 
 ## Развёртывание
 
@@ -59,7 +58,7 @@ uv run python -m unittest discover -s tests -v
 cp deploy/loader/config.example.yaml deploy/loader/config.yaml
 ```
 
-Заполните в `deploy/loader/config.yaml` S3 bucket и ключи, выбранный backend и адрес хранилища. Для Fuseki `fuseki.url` задаётся как адрес dataset без `/data`; для GraphDB задайте `graphdb.url` как адрес сервера без `/repositories` и имя `graphdb.repository`. Пути `/app/mappings/bitrix24/...` подходят для контейнера; для локального запуска замените их на пути checkout, задайте адрес RDF-хранилища, доступный с хоста, и отдельный локальный `checkpoint.path`. Для GraphDB используйте отдельный checkpoint и том. По умолчанию `checkpoint.resume_mode: strict` скачивает и проверяет SHA-256 каждого события. Для ускорения повторного запуска после прерывания задайте `checkpoint.resume_mode: fast`; режим пропустит скачивание только для событий, которые точно совпадают с checkpoint. Описание и ограничения режима — в [руководстве по загрузке](docs/S3_TO_FUSEKI_LOADING.md#быстрое-восстановление). Не добавляйте в Git конфигурацию с секретами или файлы SQLite.
+Заполните в `deploy/loader/config.yaml` S3 bucket и ключи, выбранный backend и адрес хранилища. Для Fuseki `fuseki.url` задаётся как адрес dataset без `/data`; для GraphDB задайте `graphdb.url` как адрес сервера без `/repositories` и имя `graphdb.repository`. Пути `/app/mappings/bitrix24/...` подходят для контейнера; для локального запуска замените их на пути checkout, задайте адрес RDF-хранилища, доступный с хоста, и отдельный локальный `checkpoint.path`. Для GraphDB используйте отдельный checkpoint и том. По умолчанию `checkpoint.resume_mode: strict` скачивает и проверяет SHA-256 каждого события. Для ускорения повторного запуска после прерывания задайте `checkpoint.resume_mode: fast`; ограничения режима описаны в [runbook контракта v2](docs/LOADER_CONTRACT_V2_RUNBOOK.md). Не добавляйте в Git конфигурацию с секретами или файлы SQLite.
 
 ### 4. Получить опубликованные образы
 
@@ -170,7 +169,7 @@ docker compose -p semantic_bi -f deploy/loader/compose.yaml up -d --no-deps load
 
 Чтобы обновить только монитор, используйте `pull monitor` и `up -d --no-deps monitor`. Откат выполняется выбором предыдущего `sha-...` для соответствующего `*_IMAGE_TAG` и повторным `pull`/`up -d`.
 
-Compose монтирует конфигурацию как secret и хранит checkpoint в постоянном томе `loader_state`. Для продолжения после перезапуска сохраняйте этот том и тот же dataset/repository. Перед переносом checkpoint проверяйте его на копии. Не запускайте одновременно два загрузчика с одним checkpoint. Старый checkpoint без `store_backend` принимается только для Fuseki и при первом старте привязывается к выбранному endpoint. Для GraphDB создайте отдельный checkpoint и выполните начальную загрузку из принятого полного snapshot. Смена backend сама по себе не переносит RDF-графы: перед переключением сверьте состав графов в целевом хранилище.
+Compose монтирует конфигурацию как secret и хранит v2 checkpoint в постоянном томе `loader_state`. Для продолжения после перезапуска сохраняйте этот том и тот же dataset/repository. Перед переносом checkpoint проверяйте его на копии. Не запускайте одновременно два загрузчика с одним checkpoint. Legacy checkpoint не поддерживается; для новой цели создайте отдельный v2 checkpoint и выполните начальную загрузку из полного snapshot. Смена backend сама по себе не переносит RDF-графы: перед переключением сверьте состав графов в целевом хранилище.
 
 Для отдельного GraphDB loader volume запускайте Compose с другим project name:
 

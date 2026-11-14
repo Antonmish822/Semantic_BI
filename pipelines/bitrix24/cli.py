@@ -6,17 +6,26 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config as BotoConfig
 
 from .config import load_config
 from .mapper import load_mappings
-from .source import make_s3
-from .v2.protocol import object_json, sha256, validate_state
-from .v2.runner import run_cycle_v2, apply_backfill_manifest
+from .v2.runner import read_contract_state, run_cycle_v2, apply_backfill_manifest
 from ..core.checkpoint import Checkpoint
-from .runner import run_cycle
 from ..stores.fuseki import FusekiStore
 from ..stores.graphdb import GraphDBStore
+
+
+def make_s3(config):
+    return boto3.client(
+        "s3", endpoint_url=config.endpoint_url, region_name=config.region,
+        aws_access_key_id=config.access_key, aws_secret_access_key=config.secret_key,
+        config=BotoConfig(connect_timeout=min(10, config.s3_read_timeout_seconds),
+                          read_timeout=config.s3_read_timeout_seconds,
+                          retries={"max_attempts": 3, "mode": "standard"}),
+    )
 
 
 def make_store(config):
@@ -27,36 +36,6 @@ def make_store(config):
         return GraphDBStore(config.store_url, config.graphdb_repository,
                             config.store_username, config.store_password, config.store_timeout)
     raise ValueError(f"Неизвестный backend: {config.backend}")
-
-
-def read_dispatch_state(s3, config, deadline=None):
-    key = f"{config.portal_prefix}state.json"
-    body = s3.get_object(Bucket=config.bucket, Key=key)["Body"].read(config.max_state_bytes + 1)
-    if deadline is not None and time.monotonic() >= deadline:
-        raise TimeoutError("Превышено max_cycle_read_seconds при чтении state.json")
-    if len(body) > config.max_state_bytes:
-        raise ValueError("state.json превышает настроенный размер")
-    try:
-        state = object_json(body, key)
-    except ValueError:
-        # Contract 1 historically accepts UTF-8 BOM and non-canonical spacing.
-        try:
-            state = json.loads(body.decode("utf-8-sig"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ValueError("state.json не является допустимым JSON") from exc
-    v2_fields = {"revision", "epoch_id", "base_manifest_sha256", "tip_run_id", "tip_manifest_sha256"}
-    if "contract_version" not in state and v2_fields.intersection(state):
-        raise ValueError("state.json содержит поля v2 без contract_version; безопасное переключение запрещено")
-    version = state.get("contract_version", 1)
-    if type(version) is not int or version not in {1, 2}:
-        raise ValueError("Неизвестная contract_version; безопасное переключение запрещено")
-    if version == 1 and v2_fields.intersection(state):
-        raise ValueError("state.json помечен v1, но содержит поля v2; безопасное переключение запрещено")
-    if version == 2:
-        validate_state(state, config.portal_prefix)
-        if object_json(body, key) != state:
-            raise ValueError("state.json v2 неканонический")
-    return state, sha256(body), version
 
 
 def main(argv=None):
@@ -79,21 +58,19 @@ def main(argv=None):
     checkpoint = Checkpoint(config.checkpoint_path)
     status_path = config.checkpoint_path.parent / "status.json"
     backup_request_path = config.checkpoint_path.parent / "backup.request.json"
-    status_snapshot = {"last_run_id": None, "base_manifest_key": None}
+    status_snapshot = {"base_manifest_key": None}
 
     def write_status(**extra):
         if checkpoint is not None and checkpoint.db is not None:
-            status_snapshot["last_run_id"] = checkpoint.get_meta("last_run_id")
             status_snapshot["base_manifest_key"] = checkpoint.get_meta("base_manifest_key")
-            if checkpoint.get_meta("contract_version") == "2":
-                status_snapshot.update({
-                    "contract_version": 2,
-                    "epoch_id": checkpoint.get_meta("epoch_id"),
-                    "base_manifest_sha256": checkpoint.get_meta("base_manifest_sha256"),
-                    "applied_tip_run_id": checkpoint.get_meta("applied_tip_run_id") or None,
-                    "applied_tip_manifest_sha256": checkpoint.get_meta("applied_tip_manifest_sha256") or None,
-                    "observed_state_revision": int(checkpoint.get_meta("observed_state_revision") or 0),
-                })
+            status_snapshot.update({
+                "contract_version": 2,
+                "epoch_id": checkpoint.get_meta("epoch_id"),
+                "base_manifest_sha256": checkpoint.get_meta("base_manifest_sha256"),
+                "applied_tip_run_id": checkpoint.get_meta("applied_tip_run_id") or None,
+                "applied_tip_manifest_sha256": checkpoint.get_meta("applied_tip_manifest_sha256") or None,
+                "observed_state_revision": int(checkpoint.get_meta("observed_state_revision") or 0),
+            })
         payload = {"updated_at": datetime.now(timezone.utc).isoformat(),
                    "mode": "once" if args.once else "continuous",
                    **status_snapshot, **extra}
@@ -136,10 +113,7 @@ def main(argv=None):
                 break
 
         checkpoint.resume()
-        if checkpoint.get_meta("contract_version") == "2":
-            checkpoint.bind_store_v2(config.backend, identity)
-        else:
-            checkpoint.bind_store(config.backend, identity)
+        checkpoint.bind_store_v2(config.backend, identity)
         write_status(state="waiting", phase="cycle", error=None,
                      maintenance={"state": "resumed", "backup_id": backup_id})
         logging.getLogger("rdf_sync").info("Загрузчик возобновлён после backup barrier %s", backup_id)
@@ -149,9 +123,7 @@ def main(argv=None):
         if args.apply_backfill_key or args.apply_backfill_sha256:
             if not args.apply_backfill_key or not args.apply_backfill_sha256:
                 raise ValueError("Для backfill нужны и --apply-backfill-key, и --apply-backfill-sha256")
-            exporter_state, _state_sha, protocol_version = read_dispatch_state(s3, config)
-            if protocol_version != 2:
-                raise RuntimeError("Explicit backfill application requires the active contract 2 loader")
+            exporter_state, _state_sha = read_contract_state(s3, config)
             checkpoint.bind_store_v2(config.backend, identity)
             result = apply_backfill_manifest(s3, config, checkpoint, mappings, store,
                                              args.apply_backfill_key, args.apply_backfill_sha256)
@@ -161,21 +133,12 @@ def main(argv=None):
             pause_for_backup()
             try:
                 cycle_deadline = time.monotonic() + config.max_cycle_read_seconds
-                exporter_state, state_sha, protocol_version = read_dispatch_state(s3, config, cycle_deadline)
-                if protocol_version == 2:
-                    checkpoint.bind_store_v2(config.backend, identity)
-                    write_status(state="running", phase="contract_v2", error=None,
-                                 contract_version=2, observed_state_revision=exporter_state["revision"])
-                    run_cycle_v2(s3, config, checkpoint, mappings, store,
-                                 state=(exporter_state, state_sha), deadline=cycle_deadline)
-                else:
-                    checkpoint.bind_store(config.backend, identity)
-                    for field in ("epoch_id", "base_manifest_sha256", "applied_tip_run_id",
-                                  "applied_tip_manifest_sha256", "observed_state_revision"):
-                        status_snapshot.pop(field, None)
-                    write_status(state="running", phase="contract_v1", error=None,
-                                 contract_version=1)
-                    run_cycle(s3, config, checkpoint, mappings, store, exporter_state)
+                exporter_state, state_sha = read_contract_state(s3, config, cycle_deadline)
+                checkpoint.bind_store_v2(config.backend, identity)
+                write_status(state="running", phase="contract_v2", error=None,
+                             contract_version=2, observed_state_revision=exporter_state["revision"])
+                run_cycle_v2(s3, config, checkpoint, mappings, store,
+                             state=(exporter_state, state_sha), deadline=cycle_deadline)
             except Exception as exc:
                 state_label = "blocked" if isinstance(exc, (ValueError, KeyError, ClientError)) else "error"
                 write_status(state=state_label, phase="cycle", error="cycle_failed")

@@ -17,11 +17,11 @@ class Checkpoint:
         self.db.row_factory = sqlite3.Row
         if self.db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'").fetchone():
             row = self.db.execute("SELECT value FROM meta WHERE key='checkpoint_version'").fetchone()
-            if row and row["value"] not in {"1", "2"}:
+            if row and row["value"] != "2":
                 self.db.close()
                 fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_UN)
                 self.lock_file.close()
-                raise RuntimeError(f"Неизвестная версия checkpoint: {row['value']}")
+                raise RuntimeError("Поддерживаются только v2 checkpoint; legacy checkpoint использовать нельзя")
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript("""
             CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -57,38 +57,18 @@ class Checkpoint:
                 self.db.execute(f"ALTER TABLE runs ADD COLUMN {name} TEXT")
         self.db.commit()
 
-    def bind_store(self, backend: str, identity: str) -> None:
-        """Bind legacy Fuseki state or a fresh database to one RDF target."""
-        version = self.get_meta("checkpoint_version")
-        if version not in (None, "1"):
-            raise RuntimeError(f"Неизвестная версия checkpoint: {version}")
-        bound_backend = self.get_meta("store_backend")
-        bound_identity = self.get_meta("store_identity")
-        if bound_backend is None:
-            has_history = (self.db.execute("SELECT 1 FROM entities LIMIT 1").fetchone()
-                           or self.db.execute("SELECT 1 FROM runs LIMIT 1").fetchone()
-                           or self.get_meta("base_manifest_key"))
-            if has_history and backend != "fuseki":
-                raise RuntimeError("Существующий checkpoint без привязки принадлежит Fuseki; для GraphDB нужен отдельный файл")
-        elif (bound_backend, bound_identity) != (backend, identity):
-            raise RuntimeError(f"Checkpoint привязан к {bound_backend} {bound_identity}, выбран {backend} {identity}")
-        with self.db:
-            for key, value in (("checkpoint_version", "1"), ("store_backend", backend), ("store_identity", identity)):
-                self.db.execute("INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
-
     def bind_store_v2(self, backend: str, identity: str) -> None:
         """Bind a v2 checkpoint without adopting or downgrading legacy state."""
         version = self.get_meta("checkpoint_version")
         protocol = self.get_meta("contract_version")
-        if version == "1" or protocol == "1":
-            raise RuntimeError("Checkpoint v1 нельзя автоматически использовать для контракта 2; требуется отдельный checkpoint и snapshot")
         if version not in (None, "2") or protocol not in (None, "2"):
             raise RuntimeError("Checkpoint привязан к несовместимой версии протокола")
         bound_backend = self.get_meta("store_backend")
         bound_identity = self.get_meta("store_identity")
         if bound_backend is None:
             has_history = (self.db.execute("SELECT 1 FROM entities LIMIT 1").fetchone()
-                           or self.db.execute("SELECT 1 FROM runs LIMIT 1").fetchone())
+                           or self.db.execute("SELECT 1 FROM runs LIMIT 1").fetchone()
+                           or self.get_meta("base_manifest_key"))
             if has_history:
                 raise RuntimeError("Checkpoint без версии протокола содержит историю; требуется отдельный файл v2")
         elif (bound_backend, bound_identity) != (backend, identity):

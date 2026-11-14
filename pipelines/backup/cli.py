@@ -25,6 +25,8 @@ from .graphdb import GraphDBRecovery
 from .fuseki import FusekiBackup
 
 LOG = logging.getLogger("backup")
+V2_SYNC_FIELDS = ("epoch_id", "base_manifest_sha256", "applied_tip_run_id",
+                  "applied_tip_manifest_sha256", "observed_state_revision")
 
 
 def utc_now() -> str:
@@ -157,7 +159,7 @@ class LoaderBarrier:
             status = self._status()
             maintenance = status.get("maintenance") or {}
             if status.get("state") == "paused" and maintenance.get("backup_id") == self.backup_id:
-                LOG.info("Загрузчик приостановлен после цикла run=%s", status.get("last_run_id"))
+                LOG.info("Загрузчик приостановлен после цикла run=%s", status.get("applied_tip_run_id"))
                 return status
             time.sleep(1)
         self.release()
@@ -274,22 +276,14 @@ def verify_package(directory: Path) -> tuple[dict, Path, Path]:
         raise ValueError(f"Checkpoint backup не привязан к {backend}")
     if safe_url(checkpoint["meta"].get("store_identity", "")) != manifest.get("store", {}).get("identity"):
         raise ValueError("Checkpoint identity не совпадает с manifest backup")
-    if checkpoint["meta"].get("last_run_id") != manifest.get("sync", {}).get("last_run_id"):
-        raise ValueError("Checkpoint cursor не совпадает с manifest backup")
     sync = manifest.get("sync", {})
-    checkpoint_protocol = int(checkpoint["meta"].get("contract_version", "1"))
-    if int(sync.get("contract_version", 1)) != checkpoint_protocol:
-        raise ValueError("Checkpoint contract version не совпадает с manifest backup")
-    if sync.get("contract_version") == 2:
-        for status_key, meta_key in (("epoch_id", "epoch_id"),
-                                     ("base_manifest_sha256", "base_manifest_sha256"),
-                                     ("applied_tip_run_id", "applied_tip_run_id"),
-                                     ("applied_tip_manifest_sha256", "applied_tip_manifest_sha256"),
-                                     ("observed_state_revision", "observed_state_revision")):
-            expected = sync.get(status_key)
-            actual = checkpoint["meta"].get(meta_key)
-            if str(expected or "") != str(actual or ""):
-                raise ValueError(f"Checkpoint v2 не совпадает с backup manifest по {meta_key}")
+    if (checkpoint["meta"].get("checkpoint_version") != "2"
+            or checkpoint["meta"].get("contract_version") != "2"
+            or sync.get("contract_version") != 2):
+        raise ValueError("Поддерживаются только v2 checkpoint backup-пакеты")
+    for key in ("base_manifest_key", *V2_SYNC_FIELDS):
+        if str(checkpoint["meta"].get(key) or "") != str(sync.get(key) or ""):
+            raise ValueError(f"Checkpoint v2 не совпадает с backup manifest по {key}")
     return manifest, store_path, checkpoint_path
 
 
@@ -329,21 +323,21 @@ def create_backup(config, raw: dict, output: Path, barrier_timeout: int, offline
         engine_version = server_info.get("version")
         checkpoint_file = staging / "checkpoint.sqlite"
         checkpoint_info = sqlite_backup(config.checkpoint_path, checkpoint_file)
+        if (checkpoint_info["meta"].get("checkpoint_version") != "2"
+                or checkpoint_info["meta"].get("contract_version") != "2"
+                or status.get("contract_version") != 2):
+            raise RuntimeError("Backup CLI поддерживает только контракт 2; checkpoint/status v2 обязательны")
         expected_identity = make_store(config).endpoint
         if checkpoint_info["meta"].get("store_identity") != expected_identity:
             raise RuntimeError(f"Checkpoint identity не совпадает с endpoint текущего {config.backend}")
-        for key in ("last_run_id", "base_manifest_key"):
+        sync_fields = ("base_manifest_key", *V2_SYNC_FIELDS)
+        v2_sync = {}
+        for key in sync_fields:
             status_value = status.get(key)
             checkpoint_value = checkpoint_info["meta"].get(key)
-            if status_value and checkpoint_value != status_value:
-                raise RuntimeError(f"Status/checkpoint не совпали по {key}; backup-пакет не создан")
-        v2_sync = {}
-        if checkpoint_info["meta"].get("contract_version") == "2":
-            for key in ("epoch_id", "base_manifest_sha256", "applied_tip_run_id",
-                        "applied_tip_manifest_sha256", "observed_state_revision"):
-                if str(status.get(key) or "") != str(checkpoint_info["meta"].get(key) or ""):
-                    raise RuntimeError(f"Status/checkpoint v2 не совпали по {key}; backup-пакет не создан")
-                v2_sync[key] = status.get(key)
+            if str(status_value or "") != str(checkpoint_value or ""):
+                raise RuntimeError(f"Status/checkpoint v2 не совпали по {key}; backup-пакет не создан")
+            v2_sync[key] = status_value
         files = {
             "store": {"path": store_archive.relative_to(staging).as_posix(), "bytes": store_archive.stat().st_size,
                       "sha256": sha256(store_archive), "format": store_format},
@@ -362,9 +356,7 @@ def create_backup(config, raw: dict, output: Path, barrier_timeout: int, offline
             "format": "semantic-bi-backup/v1", "backup_id": barrier.backup_id,
             "created_at": utc_now(), "state": "complete",
             "store": store_manifest,
-            "sync": {"last_run_id": status.get("last_run_id"),
-                     "base_manifest_key": status.get("base_manifest_key"),
-                     "contract_version": int(checkpoint_info["meta"].get("contract_version", "1")),
+            "sync": {"contract_version": 2,
                      **v2_sync,
                      "mode": status.get("mode"),
                      "mapping_versions": checkpoint_info["mapping_versions"]},
@@ -426,17 +418,14 @@ def restore_backup(config, raw: dict, directory: Path, confirmation: str,
             raise ValueError("Checkpoint в backup привязан к другому endpoint")
         if checkpoint_info["meta"].get("store_backend") != backend:
             raise ValueError(f"Checkpoint в backup не привязан к {backend}")
-        if checkpoint_info["meta"].get("last_run_id") != manifest.get("sync", {}).get("last_run_id"):
-            raise ValueError("Позиция checkpoint не совпадает с manifest backup")
         sync = manifest.get("sync", {})
-        checkpoint_protocol = int(checkpoint_info["meta"].get("contract_version", "1"))
-        if int(sync.get("contract_version", 1)) != checkpoint_protocol:
-            raise ValueError("Checkpoint contract version не совпадает с backup manifest")
-        if sync.get("contract_version") == 2:
-            for key in ("epoch_id", "base_manifest_sha256", "applied_tip_run_id",
-                        "applied_tip_manifest_sha256", "observed_state_revision"):
-                if str(checkpoint_info["meta"].get(key) or "") != str(sync.get(key) or ""):
-                    raise ValueError(f"Checkpoint backup v2 не совпадает по {key}")
+        if (checkpoint_info["meta"].get("checkpoint_version") != "2"
+                or checkpoint_info["meta"].get("contract_version") != "2"
+                or sync.get("contract_version") != 2):
+            raise ValueError("Поддерживаются только v2 checkpoint backup-пакеты")
+        for key in ("base_manifest_key", *V2_SYNC_FIELDS):
+            if str(checkpoint_info["meta"].get(key) or "") != str(sync.get(key) or ""):
+                raise ValueError(f"Checkpoint backup v2 не совпадает по {key}")
 
         if backend == "fuseki":
             # A pre-restore image allows rollback if the transactional dataset

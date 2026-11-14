@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from botocore.exceptions import ClientError
 
 from ...core.runner import apply_graph_operation
@@ -11,9 +11,23 @@ from ..identity import SUPPORTED_ENTITIES, entity_graph_uri
 from ..mapper import mapping_fingerprint, transform_event
 from .protocol import (canonical_json, object_json, sha256, validate_event,
                        validate_manifest, validate_state)
-from ..source import is_stale
 
 LOG = logging.getLogger("rdf_sync")
+
+
+def is_stale(modified: str | None, current_modified: str | None) -> bool:
+    if not modified or not current_modified:
+        return False
+    try:
+        incoming = datetime.fromisoformat(modified.replace("Z", "+00:00"))
+        current = datetime.fromisoformat(current_modified.replace("Z", "+00:00"))
+        if incoming.tzinfo is None:
+            incoming = incoming.replace(tzinfo=timezone.utc)
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=timezone.utc)
+        return incoming.astimezone(timezone.utc) < current.astimezone(timezone.utc)
+    except ValueError:
+        return False
 
 
 def _ensure_deadline(deadline):

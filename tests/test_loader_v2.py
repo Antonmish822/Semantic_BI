@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,7 +14,6 @@ from pipelines.bitrix24.config import load_config
 from pipelines.bitrix24.identity import entity_graph_uri
 from pipelines.bitrix24.v2.protocol import canonical_json, sha256, validate_event, object_json
 from pipelines.bitrix24.v2.runner import run_cycle_v2, apply_backfill_manifest
-from pipelines.bitrix24.prepare_v2_checkpoint import prepare
 from pipelines.core.checkpoint import Checkpoint
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -510,42 +510,15 @@ class LoaderV2Tests(unittest.TestCase):
                 self.assertEqual(cp.get_meta("base_manifest_sha256"), base_sha)
             finally: cp.close()
 
-    def test_v1_checkpoint_cannot_be_adopted_by_v2(self):
+    def test_legacy_checkpoint_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             cfg = make_config(tmp); cp = Checkpoint(cfg.checkpoint_path)
-            cp.bind_store("fuseki", "isolated"); cp.close()
-            cp = Checkpoint(cfg.checkpoint_path)
-            try:
-                with self.assertRaisesRegex(RuntimeError, "нельзя автоматически"):
-                    cp.bind_store_v2("fuseki", "isolated")
-            finally: cp.close()
-
-    def test_explicit_checkpoint_preparation_preserves_entities_not_v1_cursor(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            source = Path(tmp) / "v1.sqlite3"
-            destination = Path(tmp) / "v2.sqlite3"
-            cp = Checkpoint(source)
-            cp.bind_store("fuseki", "http://fuseki.invalid/ds/data")
-            key = "portal-test/deal/100"
-            cp.save_entity(key, entity_graph_uri("urn:bitrix24:entity", key), "old-event",
-                           "2026-11-13T00:00:00Z", False, "old-key", "a" * 64, "mapping-old")
-            cp.set_meta("base_manifest_key", "legacy-base")
-            cp.set_meta("last_run_id", "legacy-run")
-            cp.save_run("legacy-run", "legacy-key", None, "incremental")
             cp.close()
-            result = prepare(source, destination, "fuseki", "http://fuseki.invalid/ds/data")
-            self.assertEqual(result["entity_rows"], 1)
-            self.assertEqual(result["run_rows"], 0)
-            self.assertTrue(source.is_file())
-            migrated = Checkpoint(destination)
-            try:
-                self.assertEqual(migrated.get_meta("checkpoint_version"), "2")
-                self.assertEqual(migrated.get_meta("contract_version"), "2")
-                self.assertIsNone(migrated.get_meta("last_run_id"))
-                self.assertIsNone(migrated.get_meta("base_manifest_key"))
-                self.assertEqual(migrated.get_entity(key)["event_id"], "old-event")
-                migrated.bind_store_v2("fuseki", "http://fuseki.invalid/ds/data")
-            finally: migrated.close()
+            with sqlite3.connect(cfg.checkpoint_path) as db:
+                db.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+                db.execute("INSERT INTO meta VALUES ('checkpoint_version', '1')")
+            with self.assertRaisesRegex(RuntimeError, "только v2 checkpoint"):
+                Checkpoint(cfg.checkpoint_path)
 
 
 if __name__ == "__main__": unittest.main()

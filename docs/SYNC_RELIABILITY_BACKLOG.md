@@ -36,4 +36,4 @@
 
 - Экспортёр: `bitrix24_s3_export/operations/refresh.py`, `bitrix24_s3_export/function/incremental.py`.
 - Синхронизатор: `pipelines/bitrix24/runner.py`, функции `run_id_time()` и `run_incrementals()`.
-- Обзор полной загрузки и текущих ограничений: [S3_TO_FUSEKI_LOADING.md](S3_TO_FUSEKI_LOADING.md).
+- Историческое описание полной загрузки: [архивный документ](archive/S3_TO_FUSEKI_LOADING.md). Актуальная эксплуатация описана в [runbook контракта 2](LOADER_CONTRACT_V2_RUNBOOK.md).

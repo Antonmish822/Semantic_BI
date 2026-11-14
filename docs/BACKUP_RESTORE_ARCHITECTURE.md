@@ -109,8 +109,9 @@ GraphDB требует, чтобы экземпляр был запущен дл
 Для v2 manifest backup дополнительно фиксирует `contract_version`, `epoch_id`,
 `base_manifest_sha256`, `applied_tip_run_id`, `applied_tip_manifest_sha256` и
 `observed_state_revision`. `backup verify` и `restore` сравнивают эти значения с
-SQLite перед подтверждением пары. Переход v1 → v2 и подготовка копии checkpoint
-описаны в [runbook контракта 2](LOADER_CONTRACT_V2_RUNBOOK.md).
+SQLite перед подтверждением пары. Backup/restore поддерживает только v2
+checkpoint; legacy пакеты не принимаются. Правила эксплуатации приведены в
+[runbook контракта 2](LOADER_CONTRACT_V2_RUNBOOK.md).
 
 Backup Compose находится в `deploy/fuseki/compose.yaml`. Он подключается к сети действующего Fuseki, монтирует его `FUSEKI_BASE/backups` и тот же внешний loader checkpoint volume. Fuseki должен быть запущен и предоставить административные права на `/$/backup`, `/$/backups-list` и `/$/tasks`. Путь в `fuseki.backup_directory` внутри конфигурации должен быть `/fuseki/backups`; соответствующую host-папку задаёт `FUSEKI_BACKUP_DIR`.
 
