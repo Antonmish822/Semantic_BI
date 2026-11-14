@@ -1,0 +1,135 @@
+{
+  "algorithm": 4,
+  "encoding": "Synthetic cross-runtime control vectors. UTF-8 canonical JSON.",
+  "vectors": [
+    {
+      "portal": "garpix",
+      "entity": "deal",
+      "payload": {
+        "ID": "42",
+        "TITLE": "Проверка",
+        "OPPORTUNITY": 12.5,
+        "DATE_MODIFY": "2026-11-13T12:00:00.123+03:00"
+      },
+      "bindings": [],
+      "identity": "42",
+      "digest": "48485c76e78fa2ce36bfb99515d43044c4b3e4839bedf994f1ff8d3ff67e0609",
+      "event_id_preimage": "[\"bitrix24-event-id-v4\",\"garpix\",\"deal\",\"42\",\"2026-11-13T09:00:00.123000Z\",\"48485c76e78fa2ce36bfb99515d43044c4b3e4839bedf994f1ff8d3ff67e0609\"]",
+      "canonical_event": "{\"bindings\":[],\"entity_key\":\"garpix/deal/42\",\"event_id\":\"40686a2aaad5524c6306d8f4e65b897f732938edb7057cb3a6c2da8e9047ba98\",\"event_id_algorithm\":4,\"graph_id\":\"urn:bitrix24:graph:garpix:40686a2aaad5524c6306d8f4e65b897f732938edb7057cb3a6c2da8e9047ba98\",\"observed_at\":\"2026-11-13T09:00:00.123000Z\",\"operation\":\"upsert\",\"payload\":{\"DATE_MODIFY\":\"2026-11-13T12:00:00.123+03:00\",\"ID\":\"42\",\"OPPORTUNITY\":12.5,\"TITLE\":\"Проверка\"},\"schema_version\":4,\"source_modified_at\":\"2026-11-13T09:00:00.123000Z\"}",
+      "event_id": "40686a2aaad5524c6306d8f4e65b897f732938edb7057cb3a6c2da8e9047ba98",
+      "sha256": "672eabbead6b8ae94dbd9f5864bae04593d11f8d429c4dcf36e167244059e2d5",
+      "key": "bitrix24/garpix/events/deal/42/40686a2aaad5524c6306d8f4e65b897f732938edb7057cb3a6c2da8e9047ba98.json"
+    },
+    {
+      "portal": "garpix",
+      "entity": "source",
+      "payload": {
+        "ENTITY_ID": "SOURCE",
+        "STATUS_ID": "A|B",
+        "NAME": "source pipe"
+      },
+      "bindings": [],
+      "identity": "SOURCE:A%7CB",
+      "digest": "45436e0195e2d891da60495451b9837eeef1f4288cbd11756dba1f181f22cc40",
+      "event_id_preimage": "[\"bitrix24-event-id-v4\",\"garpix\",\"source\",\"SOURCE:A%7CB\",null,\"45436e0195e2d891da60495451b9837eeef1f4288cbd11756dba1f181f22cc40\"]",
+      "canonical_event": "{\"bindings\":[],\"entity_key\":\"garpix/source/SOURCE:A%7CB\",\"event_id\":\"5d334323473ea9f64911cfd526a468ee50f2392870eee9467172c6e6959560d6\",\"event_id_algorithm\":4,\"graph_id\":\"urn:bitrix24:graph:garpix:5d334323473ea9f64911cfd526a468ee50f2392870eee9467172c6e6959560d6\",\"observed_at\":\"1970-01-01T00:00:00Z\",\"operation\":\"upsert\",\"payload\":{\"ENTITY_ID\":\"SOURCE\",\"NAME\":\"source pipe\",\"STATUS_ID\":\"A|B\"},\"schema_version\":4,\"source_modified_at\":null}",
+      "event_id": "5d334323473ea9f64911cfd526a468ee50f2392870eee9467172c6e6959560d6",
+      "sha256": "dd6e01316b2eb9b1af7a8899de0d9e8a515ba07e9b3a35328f488550b1ec4d9e",
+      "key": "bitrix24/garpix/events/source/SOURCE:A%7CB/5d334323473ea9f64911cfd526a468ee50f2392870eee9467172c6e6959560d6.json"
+    },
+    {
+      "portal": "garpix",
+      "entity": "source",
+      "payload": {
+        "ENTITY_ID": "SOURCE",
+        "STATUS_ID": "A%7CB",
+        "NAME": "source percent"
+      },
+      "bindings": [],
+      "identity": "SOURCE:A%257CB",
+      "digest": "6a1fce3e129cef2377cc9fa4d0700739686a1e9ab78919d22a8ef7cabc62eca4",
+      "event_id_preimage": "[\"bitrix24-event-id-v4\",\"garpix\",\"source\",\"SOURCE:A%257CB\",null,\"6a1fce3e129cef2377cc9fa4d0700739686a1e9ab78919d22a8ef7cabc62eca4\"]",
+      "canonical_event": "{\"bindings\":[],\"entity_key\":\"garpix/source/SOURCE:A%257CB\",\"event_id\":\"d603b8a097329834290d2e09844fce4ed73e8832e0434cf22cf4f991a619d258\",\"event_id_algorithm\":4,\"graph_id\":\"urn:bitrix24:graph:garpix:d603b8a097329834290d2e09844fce4ed73e8832e0434cf22cf4f991a619d258\",\"observed_at\":\"1970-01-01T00:00:00Z\",\"operation\":\"upsert\",\"payload\":{\"ENTITY_ID\":\"SOURCE\",\"NAME\":\"source percent\",\"STATUS_ID\":\"A%7CB\"},\"schema_version\":4,\"source_modified_at\":null}",
+      "event_id": "d603b8a097329834290d2e09844fce4ed73e8832e0434cf22cf4f991a619d258",
+      "sha256": "a93d7920dc196dd24efe483a516a8cfc065bb096e3b3ac9896d95ea6f0e615a5",
+      "key": "bitrix24/garpix/events/source/SOURCE:A%257CB/d603b8a097329834290d2e09844fce4ed73e8832e0434cf22cf4f991a619d258.json"
+    },
+    {
+      "portal": "garpix",
+      "entity": "source",
+      "payload": {
+        "ENTITY_ID": "E:NT/ITY%",
+        "STATUS_ID": "|/:%",
+        "NAME": "special components"
+      },
+      "bindings": [],
+      "identity": "E%3ANT%2FITY%25:%7C%2F%3A%25",
+      "digest": "e09f69061e8b3a6aaff914a1f08133ecdd893c1caa6bdce71ebc509375135265",
+      "event_id_preimage": "[\"bitrix24-event-id-v4\",\"garpix\",\"source\",\"E%3ANT%2FITY%25:%7C%2F%3A%25\",null,\"e09f69061e8b3a6aaff914a1f08133ecdd893c1caa6bdce71ebc509375135265\"]",
+      "canonical_event": "{\"bindings\":[],\"entity_key\":\"garpix/source/E%3ANT%2FITY%25:%7C%2F%3A%25\",\"event_id\":\"17a040a7bab72c3cfee4bc711a3f030af07509497e726481796d19be3a48a494\",\"event_id_algorithm\":4,\"graph_id\":\"urn:bitrix24:graph:garpix:17a040a7bab72c3cfee4bc711a3f030af07509497e726481796d19be3a48a494\",\"observed_at\":\"1970-01-01T00:00:00Z\",\"operation\":\"upsert\",\"payload\":{\"ENTITY_ID\":\"E:NT/ITY%\",\"NAME\":\"special components\",\"STATUS_ID\":\"|/:%\"},\"schema_version\":4,\"source_modified_at\":null}",
+      "event_id": "17a040a7bab72c3cfee4bc711a3f030af07509497e726481796d19be3a48a494",
+      "sha256": "e3d945721e8ade43692050127de6845d3451f8c162041b5de2076e4c136fbfdb",
+      "key": "bitrix24/garpix/events/source/E%3ANT%2FITY%25:%7C%2F%3A%25/17a040a7bab72c3cfee4bc711a3f030af07509497e726481796d19be3a48a494.json"
+    },
+    {
+      "portal": "garpix",
+      "entity": "stage",
+      "payload": {
+        "ENTITY_ID": "DEAL_STAGE_2",
+        "STATUS_ID": "Новая:/",
+        "NAME": "Кириллица"
+      },
+      "bindings": [],
+      "identity": "DEAL_STAGE_2:%D0%9D%D0%BE%D0%B2%D0%B0%D1%8F%3A%2F",
+      "digest": "6727dad7ddc81e559fd245d0f8c61dcae8956110efe7b30faf273fd0e73c14c4",
+      "event_id_preimage": "[\"bitrix24-event-id-v4\",\"garpix\",\"stage\",\"DEAL_STAGE_2:%D0%9D%D0%BE%D0%B2%D0%B0%D1%8F%3A%2F\",null,\"6727dad7ddc81e559fd245d0f8c61dcae8956110efe7b30faf273fd0e73c14c4\"]",
+      "canonical_event": "{\"bindings\":[],\"entity_key\":\"garpix/stage/DEAL_STAGE_2:%D0%9D%D0%BE%D0%B2%D0%B0%D1%8F%3A%2F\",\"event_id\":\"39dd907fb97048059942d29f534c825e8681b002fa8fdb2367940a3441b3fdd1\",\"event_id_algorithm\":4,\"graph_id\":\"urn:bitrix24:graph:garpix:39dd907fb97048059942d29f534c825e8681b002fa8fdb2367940a3441b3fdd1\",\"observed_at\":\"1970-01-01T00:00:00Z\",\"operation\":\"upsert\",\"payload\":{\"ENTITY_ID\":\"DEAL_STAGE_2\",\"NAME\":\"Кириллица\",\"STATUS_ID\":\"Новая:/\"},\"schema_version\":4,\"source_modified_at\":null}",
+      "event_id": "39dd907fb97048059942d29f534c825e8681b002fa8fdb2367940a3441b3fdd1",
+      "sha256": "bb2794cfdfb34280cfcbe352848855887f890acecffb7a7e62bb6a9fefa62031",
+      "key": "bitrix24/garpix/events/stage/DEAL_STAGE_2:%D0%9D%D0%BE%D0%B2%D0%B0%D1%8F%3A%2F/39dd907fb97048059942d29f534c825e8681b002fa8fdb2367940a3441b3fdd1.json"
+    },
+    {
+      "portal": "garpix",
+      "entity": "activity",
+      "payload": {
+        "ID": "9",
+        "SUBJECT": "Звонок",
+        "LAST_UPDATED": "2026-11-13T09:00:00Z"
+      },
+      "bindings": [
+        {
+          "entityTypeId": 2,
+          "entityId": 4
+        },
+        {
+          "entityTypeId": 1,
+          "entityId": 8
+        }
+      ],
+      "identity": "9",
+      "digest": "dbd9d39e896732d21447885b94717a896492ad6c1288747e426bb5bf2b508a89",
+      "event_id_preimage": "[\"bitrix24-event-id-v4\",\"garpix\",\"activity\",\"9\",\"2026-11-13T09:00:00Z\",\"dbd9d39e896732d21447885b94717a896492ad6c1288747e426bb5bf2b508a89\"]",
+      "canonical_event": "{\"bindings\":[{\"entityId\":8,\"entityTypeId\":1},{\"entityId\":4,\"entityTypeId\":2}],\"entity_key\":\"garpix/activity/9\",\"event_id\":\"866715bff7bf68451853d001c2768cf9d17dc470f06f959702c48afcf49147da\",\"event_id_algorithm\":4,\"graph_id\":\"urn:bitrix24:graph:garpix:866715bff7bf68451853d001c2768cf9d17dc470f06f959702c48afcf49147da\",\"observed_at\":\"2026-11-13T09:00:00Z\",\"operation\":\"upsert\",\"payload\":{\"ID\":\"9\",\"LAST_UPDATED\":\"2026-11-13T09:00:00Z\",\"SUBJECT\":\"Звонок\"},\"schema_version\":4,\"source_modified_at\":\"2026-11-13T09:00:00Z\"}",
+      "event_id": "866715bff7bf68451853d001c2768cf9d17dc470f06f959702c48afcf49147da",
+      "sha256": "3f992cc014ad62d5d8d112c6db87b2a3b8d44f0b1dda51cb22a9483880d28105",
+      "key": "bitrix24/garpix/events/activity/9/866715bff7bf68451853d001c2768cf9d17dc470f06f959702c48afcf49147da.json"
+    },
+    {
+      "portal": "garpix",
+      "entity": "deal",
+      "payload": {
+        "ID": 7,
+        "TITLE": "Без даты",
+        "OPPORTUNITY": 1.25
+      },
+      "bindings": [],
+      "identity": "7",
+      "digest": "160936897cab4f07ec829a18de2b1de14ac0380a26145b19b0b3952f13f61bc5",
+      "event_id_preimage": "[\"bitrix24-event-id-v4\",\"garpix\",\"deal\",\"7\",null,\"160936897cab4f07ec829a18de2b1de14ac0380a26145b19b0b3952f13f61bc5\"]",
+      "canonical_event": "{\"bindings\":[],\"entity_key\":\"garpix/deal/7\",\"event_id\":\"f8e5741808db649003dafc07fffe886c81737a0087bfb84af7cef197dafb03e5\",\"event_id_algorithm\":4,\"graph_id\":\"urn:bitrix24:graph:garpix:f8e5741808db649003dafc07fffe886c81737a0087bfb84af7cef197dafb03e5\",\"observed_at\":\"1970-01-01T00:00:00Z\",\"operation\":\"upsert\",\"payload\":{\"ID\":7,\"OPPORTUNITY\":1.25,\"TITLE\":\"Без даты\"},\"schema_version\":4,\"source_modified_at\":null}",
+      "event_id": "f8e5741808db649003dafc07fffe886c81737a0087bfb84af7cef197dafb03e5",
+      "sha256": "9efbdfb2e441a46581cbe4c3a4d054fc29d7ec13100e4c8655538c4db85b2ba6",
+      "key": "bitrix24/garpix/events/deal/7/f8e5741808db649003dafc07fffe886c81737a0087bfb84af7cef197dafb03e5.json"
+    }
+  ]
+}

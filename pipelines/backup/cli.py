@@ -276,6 +276,20 @@ def verify_package(directory: Path) -> tuple[dict, Path, Path]:
         raise ValueError("Checkpoint identity не совпадает с manifest backup")
     if checkpoint["meta"].get("last_run_id") != manifest.get("sync", {}).get("last_run_id"):
         raise ValueError("Checkpoint cursor не совпадает с manifest backup")
+    sync = manifest.get("sync", {})
+    checkpoint_protocol = int(checkpoint["meta"].get("contract_version", "1"))
+    if int(sync.get("contract_version", 1)) != checkpoint_protocol:
+        raise ValueError("Checkpoint contract version не совпадает с manifest backup")
+    if sync.get("contract_version") == 2:
+        for status_key, meta_key in (("epoch_id", "epoch_id"),
+                                     ("base_manifest_sha256", "base_manifest_sha256"),
+                                     ("applied_tip_run_id", "applied_tip_run_id"),
+                                     ("applied_tip_manifest_sha256", "applied_tip_manifest_sha256"),
+                                     ("observed_state_revision", "observed_state_revision")):
+            expected = sync.get(status_key)
+            actual = checkpoint["meta"].get(meta_key)
+            if str(expected or "") != str(actual or ""):
+                raise ValueError(f"Checkpoint v2 не совпадает с backup manifest по {meta_key}")
     return manifest, store_path, checkpoint_path
 
 
@@ -323,6 +337,13 @@ def create_backup(config, raw: dict, output: Path, barrier_timeout: int, offline
             checkpoint_value = checkpoint_info["meta"].get(key)
             if status_value and checkpoint_value != status_value:
                 raise RuntimeError(f"Status/checkpoint не совпали по {key}; backup-пакет не создан")
+        v2_sync = {}
+        if checkpoint_info["meta"].get("contract_version") == "2":
+            for key in ("epoch_id", "base_manifest_sha256", "applied_tip_run_id",
+                        "applied_tip_manifest_sha256", "observed_state_revision"):
+                if str(status.get(key) or "") != str(checkpoint_info["meta"].get(key) or ""):
+                    raise RuntimeError(f"Status/checkpoint v2 не совпали по {key}; backup-пакет не создан")
+                v2_sync[key] = status.get(key)
         files = {
             "store": {"path": store_archive.relative_to(staging).as_posix(), "bytes": store_archive.stat().st_size,
                       "sha256": sha256(store_archive), "format": store_format},
@@ -343,6 +364,8 @@ def create_backup(config, raw: dict, output: Path, barrier_timeout: int, offline
             "store": store_manifest,
             "sync": {"last_run_id": status.get("last_run_id"),
                      "base_manifest_key": status.get("base_manifest_key"),
+                     "contract_version": int(checkpoint_info["meta"].get("contract_version", "1")),
+                     **v2_sync,
                      "mode": status.get("mode"),
                      "mapping_versions": checkpoint_info["mapping_versions"]},
             "rdf": rdf_stats,
@@ -405,6 +428,15 @@ def restore_backup(config, raw: dict, directory: Path, confirmation: str,
             raise ValueError(f"Checkpoint в backup не привязан к {backend}")
         if checkpoint_info["meta"].get("last_run_id") != manifest.get("sync", {}).get("last_run_id"):
             raise ValueError("Позиция checkpoint не совпадает с manifest backup")
+        sync = manifest.get("sync", {})
+        checkpoint_protocol = int(checkpoint_info["meta"].get("contract_version", "1"))
+        if int(sync.get("contract_version", 1)) != checkpoint_protocol:
+            raise ValueError("Checkpoint contract version не совпадает с backup manifest")
+        if sync.get("contract_version") == 2:
+            for key in ("epoch_id", "base_manifest_sha256", "applied_tip_run_id",
+                        "applied_tip_manifest_sha256", "observed_state_revision"):
+                if str(checkpoint_info["meta"].get(key) or "") != str(sync.get(key) or ""):
+                    raise ValueError(f"Checkpoint backup v2 не совпадает по {key}")
 
         if backend == "fuseki":
             # A pre-restore image allows rollback if the transactional dataset

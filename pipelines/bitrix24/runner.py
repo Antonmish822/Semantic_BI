@@ -227,8 +227,9 @@ def run_incrementals(s3, config: Config, checkpoint: Checkpoint,
             break
 
 
-def run_cycle(s3, config: Config, checkpoint: Checkpoint, mappings: list[MappingEntry], store: GraphStore) -> None:
-    exporter_state = read_exporter_state(s3, config)
+def run_cycle(s3, config: Config, checkpoint: Checkpoint, mappings: list[MappingEntry],
+              store: GraphStore, exporter_state: dict | None = None) -> None:
+    exporter_state = exporter_state or read_exporter_state(s3, config)
     current_mapping_version = mapping_fingerprint(config, mappings)
     catchup_to, _snapshot_changed, snapshot_entities = maybe_apply_snapshot(
         s3, config, checkpoint, mappings, exporter_state, current_mapping_version, store

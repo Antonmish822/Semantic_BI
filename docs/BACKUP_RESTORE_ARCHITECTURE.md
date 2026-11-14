@@ -106,6 +106,12 @@ GraphDB требует, чтобы экземпляр был запущен дл
 4. до и после backup сравнивает статистику dataset, чтобы обнаружить сторонние изменения;
 5. сохраняет N-Quads вместе с checkpoint, manifest и SHA-256.
 
+Для v2 manifest backup дополнительно фиксирует `contract_version`, `epoch_id`,
+`base_manifest_sha256`, `applied_tip_run_id`, `applied_tip_manifest_sha256` и
+`observed_state_revision`. `backup verify` и `restore` сравнивают эти значения с
+SQLite перед подтверждением пары. Переход v1 → v2 и подготовка копии checkpoint
+описаны в [runbook контракта 2](LOADER_CONTRACT_V2_RUNBOOK.md).
+
 Backup Compose находится в `deploy/fuseki/compose.yaml`. Он подключается к сети действующего Fuseki, монтирует его `FUSEKI_BASE/backups` и тот же внешний loader checkpoint volume. Fuseki должен быть запущен и предоставить административные права на `/$/backup`, `/$/backups-list` и `/$/tasks`. Путь в `fuseki.backup_directory` внутри конфигурации должен быть `/fuseki/backups`; соответствующую host-папку задаёт `FUSEKI_BACKUP_DIR`.
 
 Восстановление отправляет проверенный gzip N-Quads через dataset-level quad `PUT` на Fuseki Graph Store endpoint (`/data`, `Content-Type: application/n-quads`). Jena поддерживает quad PUT как замену dataset; операция выполняется Fuseki/TDB2 как транзакция. Перед заменой адаптер запрашивает ещё один временный backup текущего dataset. Если PUT или сверка числа графов/квадов завершается ошибкой, адаптер возвращает исходный dataset из этого временного backup, а checkpoint не заменяет. При неудаче самого отката загрузчик остаётся на паузе для ручной диагностики. Checkpoint атомарно заменяется только после совпадения статистики восстановленного dataset с manifest.

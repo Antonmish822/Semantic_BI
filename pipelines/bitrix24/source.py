@@ -13,9 +13,13 @@ def canonical_json(value: Any) -> bytes:
 
 
 def make_s3(config: Config):
+    from botocore.config import Config as BotoConfig
     return boto3.client(
         "s3", endpoint_url=config.endpoint_url, region_name=config.region,
         aws_access_key_id=config.access_key, aws_secret_access_key=config.secret_key,
+        config=BotoConfig(connect_timeout=min(10, config.s3_read_timeout_seconds),
+                          read_timeout=config.s3_read_timeout_seconds,
+                          retries={"max_attempts": 3, "mode": "standard"}),
     )
 
 
@@ -154,7 +158,10 @@ def validate_manifest(manifest: dict[str, Any], run_id: str, mode: str) -> list[
 
 
 def read_exporter_state(s3, config: Config) -> dict[str, Any]:
-    return get_json(s3, config, f"{config.portal_prefix}state.json")
+    state = get_json(s3, config, f"{config.portal_prefix}state.json")
+    if state.get("contract_version", 1) != 1:
+        raise ValueError("v1 загрузчик не может читать указатель другого контракта")
+    return state
 
 
 def read_base_snapshot(s3, config: Config, exporter_state: dict[str, Any]):

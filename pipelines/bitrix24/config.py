@@ -25,6 +25,14 @@ class Config:
     fast_resume: bool
     poll_interval: int
     reconcile_entity_types: frozenset[str]
+    max_chain_length: int
+    max_objects_per_run: int
+    max_state_bytes: int
+    max_manifest_bytes: int
+    max_event_bytes: int
+    max_objects_per_cycle: int
+    max_cycle_read_seconds: int
+    s3_read_timeout_seconds: int
 
     @property
     def portal_prefix(self) -> str:
@@ -53,6 +61,12 @@ def load_config(path: Path) -> Config:
     resume_mode = checkpoint.get("resume_mode", "strict")
     if resume_mode not in {"strict", "fast"}:
         raise ValueError("checkpoint.resume_mode должен быть strict или fast")
+    limits = raw.get("contract_v2_limits") or {}
+    def positive_limit(name: str, default: int) -> int:
+        value = int(limits.get(name, default))
+        if value < 1:
+            raise ValueError(f"contract_v2_limits.{name} должен быть положительным")
+        return value
     missing = [key for key in ("bucket", "portal_id", "access_key", "secret_key") if not s3.get(key)]
     if missing:
         raise ValueError(f"Не заданы параметры s3: {', '.join(missing)}")
@@ -97,4 +111,12 @@ def load_config(path: Path) -> Config:
         fast_resume=resume_mode == "fast",
         poll_interval=max(1, int(raw.get("poll_interval_seconds", 60))),
         reconcile_entity_types=reconcile,
+        max_chain_length=positive_limit("max_chain_length", 10000),
+        max_objects_per_run=positive_limit("max_objects_per_run", 1000000),
+        max_state_bytes=positive_limit("max_state_bytes", 1024 * 1024),
+        max_manifest_bytes=positive_limit("max_manifest_bytes", 128 * 1024 * 1024),
+        max_event_bytes=positive_limit("max_event_bytes", 16 * 1024 * 1024),
+        max_objects_per_cycle=positive_limit("max_objects_per_cycle", 1000000),
+        max_cycle_read_seconds=positive_limit("max_cycle_read_seconds", 3600),
+        s3_read_timeout_seconds=positive_limit("s3_read_timeout_seconds", 60),
     )

@@ -246,3 +246,5 @@ docs/rdf-analysis/
 /examples/dev/
 /build_rdfxml.py
 /fuseki_named_graphs.txt
+.local-data/
+/local-data/

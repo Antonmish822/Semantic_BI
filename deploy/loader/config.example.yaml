@@ -13,6 +13,15 @@ checkpoint:
   # strict downloads and SHA-256 checks every event; fast skips event bodies
   # only when the checkpoint already contains the exact manifest event.
   resume_mode: strict
+contract_v2_limits:
+  max_chain_length: 10000
+  max_objects_per_run: 1000000
+  max_state_bytes: 1048576
+  max_manifest_bytes: 134217728
+  max_event_bytes: 16777216
+  max_objects_per_cycle: 1000000
+  max_cycle_read_seconds: 3600
+  s3_read_timeout_seconds: 60
 backend: fuseki
 fuseki:
   url: "http://host.docker.internal:3030/cccr"
