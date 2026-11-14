@@ -512,8 +512,7 @@ class LoaderV2Tests(unittest.TestCase):
 
     def test_legacy_checkpoint_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
-            cfg = make_config(tmp); cp = Checkpoint(cfg.checkpoint_path)
-            cp.close()
+            cfg = make_config(tmp)
             with sqlite3.connect(cfg.checkpoint_path) as db:
                 db.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
                 db.execute("INSERT INTO meta VALUES ('checkpoint_version', '1')")
