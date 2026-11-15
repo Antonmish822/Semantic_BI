@@ -131,25 +131,48 @@ def main(argv=None):
             return
         while True:
             pause_for_backup()
+            cycle_started = time.monotonic()
+            current_phase = "reading_state"
+            current_progress = {"phase": current_phase}
+            write_status(state="running", phase=current_phase, error=None)
+            logging.getLogger("rdf_sync").info("Cycle started: mode=%s; reading state.json from S3",
+                                                "once" if args.once else "continuous")
             try:
                 cycle_deadline = time.monotonic() + config.max_cycle_read_seconds
                 exporter_state, state_sha = read_contract_state(s3, config, cycle_deadline)
                 checkpoint.bind_store_v2(config.backend, identity)
+                current_phase = "contract_v2"
                 write_status(state="running", phase="contract_v2", error=None,
                              contract_version=2, observed_state_revision=exporter_state["revision"])
+
+                def report_progress(**progress):
+                    nonlocal current_phase, current_progress
+                    current_phase = progress.get("phase", current_phase)
+                    details = dict(progress)
+                    progress_state = details.pop("state", "running")
+                    current_progress = details
+                    write_status(state=progress_state, error=None, **details)
+
                 run_cycle_v2(s3, config, checkpoint, mappings, store,
-                             state=(exporter_state, state_sha), deadline=cycle_deadline)
+                             state=(exporter_state, state_sha), deadline=cycle_deadline,
+                             progress=report_progress)
             except Exception as exc:
                 state_label = "blocked" if isinstance(exc, (ValueError, KeyError, ClientError)) else "error"
-                write_status(state=state_label, phase="cycle", error="cycle_failed")
-                logging.getLogger("rdf_sync").exception("Ошибка цикла синхронизации; checkpoint сохранён для повтора")
+                write_status(state=state_label, phase=current_phase, error="cycle_failed",
+                             **{k: v for k, v in current_progress.items() if k != "phase"})
+                logging.getLogger("rdf_sync").exception(
+                    "Cycle failed: phase=%s; checkpoint сохранён для повтора", current_phase)
                 if args.once:
                     raise
             else:
+                elapsed = round(time.monotonic() - cycle_started, 1)
                 write_status(state="idle" if args.once else "waiting", phase="cycle", error=None)
+                logging.getLogger("rdf_sync").info("Cycle finished: duration_seconds=%s", elapsed)
             pause_for_backup()
             if args.once:
                 return
+            logging.getLogger("rdf_sync").info(
+                "Waiting for next cycle: poll_interval_seconds=%s", config.poll_interval)
             for _ in range(config.poll_interval):
                 pause_for_backup()
                 time.sleep(1)

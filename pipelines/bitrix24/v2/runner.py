@@ -172,18 +172,17 @@ def _apply_ref(s3, config, checkpoint, mappings, ref, mapping_version, store, de
             and ref["graph_id"] == f"urn:bitrix24:graph:{config.portal_id}:{event_id}"
             and previous["graph_uri"] == graph_uri and previous["mapping_version"] == mapping_version
             and not previous["deleted"]):
-        return entity_key
+        return entity_key, "skipped"
     event, entity_key, actual_sha = _verify_ref(s3, config, ref, deadline)
     graph_uri = entity_graph_uri(config.graph_namespace, entity_key)
     previous = checkpoint.get_entity(entity_key)
     if previous and is_stale(event.get("source_modified_at"), previous["source_modified_at"]):
-        LOG.info("Пропущена более старая версия события для %s", entity_key)
-        return entity_key
+        return entity_key, "stale"
     if (previous and previous["source_key"] == key and previous["sha256"] == actual_sha
             and previous["event_id"] == event["event_id"]
             and previous["graph_uri"] == graph_uri
             and previous["mapping_version"] == mapping_version and not previous["deleted"]):
-        return entity_key
+        return entity_key, "skipped"
     try:
         rdfxml = transform_event(config, mappings, event, key[len(config.events_prefix):])
     except Exception:
@@ -195,34 +194,64 @@ def _apply_ref(s3, config, checkpoint, mappings, ref, mapping_version, store, de
                                            actual_sha, mapping_version), rdfxml)
     except Exception:
         raise RuntimeError("RDF PUT or entity checkpoint write failed; payload omitted") from None
-    return entity_key
+    return entity_key, "applied"
 
 
-def _apply_manifest(s3, config, checkpoint, mappings, entry, mapping_version, store, deadline=None):
+def _apply_manifest(s3, config, checkpoint, mappings, entry, mapping_version, store,
+                    deadline=None, progress=None):
     key, manifest, digest = entry
     if len(manifest["objects"]) > config.max_objects_per_run:
         raise ValueError(f"Манифест превышает max_objects_per_run: {key}")
     present = set()
     if len(manifest["objects"]) > config.max_objects_per_cycle:
         raise ValueError(f"Манифест превышает max_objects_per_cycle: {key}")
-    for ref in manifest["objects"]:
-        entity_key = _apply_ref(s3, config, checkpoint, mappings, ref, mapping_version, store, deadline)
+    total = len(manifest["objects"])
+    run_id = manifest["run_id"]
+    phase = "snapshot" if manifest["mode"] == "local_snapshot" else "incremental"
+    if progress:
+        progress(state="running", phase=phase, run_id=run_id,
+                 progress_current=0, progress_total=total)
+    LOG.info("%s started: run_id=%s objects=%d", phase, run_id, total)
+    interval = max(1, min(500, total // 10))
+    counts = {"applied": 0, "skipped": 0, "stale": 0}
+    reconciliation_deleted = 0
+    for index, ref in enumerate(manifest["objects"], start=1):
+        try:
+            entity_key, outcome = _apply_ref(s3, config, checkpoint, mappings, ref,
+                                             mapping_version, store, deadline)
+            counts[outcome] += 1
+        except Exception as exc:
+            LOG.exception("%s failed: run_id=%s object_key=%s entity=%s error_type=%s",
+                          phase, run_id, ref.get("key"), ref.get("entity"), type(exc).__name__)
+            raise
         if manifest["mode"] == "local_snapshot":
             if entity_key in present:
                 raise ValueError("Snapshot содержит повторную сущность")
             present.add(entity_key)
+        if index == total or index % interval == 0:
+            if progress:
+                progress(state="running", phase=phase, run_id=run_id,
+                         progress_current=index, progress_total=total)
+            LOG.info("%s progress: run_id=%s processed=%d/%d", phase, run_id, index, total)
     if manifest["mode"] == "local_snapshot":
         from ..reconciliation import reconcile_snapshot
         allowed = frozenset(manifest["complete_entity_types"]) & config.reconcile_entity_types
         try:
-            reconcile_snapshot(config, checkpoint, store, present, manifest["run_id"], manifest,
-                               mapping_version, entity_types=allowed)
+            reconciliation_deleted = reconcile_snapshot(
+                config, checkpoint, store, present, manifest["run_id"], manifest,
+                mapping_version, entity_types=allowed)
         except Exception:
             raise RuntimeError("Snapshot reconciliation failed; payload omitted") from None
     _ensure_deadline(deadline)
     checkpoint.finish_v2_run(manifest["run_id"], key, manifest.get("created_at"),
                               manifest["mode"], manifest["epoch_id"], digest,
                               mapping_version)
+    if progress:
+        progress(state="running", phase=f"{phase}_complete", run_id=run_id,
+                 progress_current=total, progress_total=total)
+    LOG.info("%s completed: run_id=%s objects=%d applied=%d skipped=%d stale=%d deleted_graphs=%d",
+             phase, run_id, total, counts["applied"], counts["skipped"], counts["stale"],
+             reconciliation_deleted)
 
 
 def _reproject_active(s3, config, checkpoint, mappings, mapping_version, store, deadline=None):
@@ -249,7 +278,8 @@ def _reproject_active(s3, config, checkpoint, mappings, mapping_version, store, 
             raise RuntimeError("Перепроекция остановлена: исходный v2 объект недоступен") from exc
 
 
-def run_cycle_v2(s3, config, checkpoint, mappings, store, state=None, deadline=None):
+def run_cycle_v2(s3, config, checkpoint, mappings, store, state=None, deadline=None,
+                 progress=None):
     # One immutable state read defines this cycle's confirmed upper bound.
     deadline = deadline if deadline is not None else time.monotonic() + config.max_cycle_read_seconds
     state, state_sha = read_contract_state(s3, config, deadline) if state is None else state
@@ -263,6 +293,8 @@ def run_cycle_v2(s3, config, checkpoint, mappings, store, state=None, deadline=N
         raise RuntimeError("state.json изменился без увеличения revision")
     mapping_version = mapping_fingerprint(config, mappings)
     base, base_sha = _base_snapshot(s3, config, state, deadline)
+    LOG.info("Cycle started: epoch_id=%s revision=%s tip_run_id=%s",
+             state["epoch_id"], state["revision"], state["tip_run_id"] or "none")
     if len(base["objects"]) > config.max_objects_per_cycle:
         raise ValueError(f"Snapshot превышает max_objects_per_cycle={config.max_objects_per_cycle}")
 
@@ -272,7 +304,8 @@ def run_cycle_v2(s3, config, checkpoint, mappings, store, state=None, deadline=N
         raise RuntimeError("Checkpoint и base snapshot SHA конфликтуют внутри одной epoch")
     if saved_epoch != state["epoch_id"] or saved_base_sha != base_sha:
         _apply_manifest(s3, config, checkpoint, mappings,
-                        (state["base_manifest_key"], base, base_sha), mapping_version, store, deadline)
+                        (state["base_manifest_key"], base, base_sha), mapping_version,
+                        store, deadline, progress)
     elif not config.fast_resume:
         for ref in base["objects"]:
             _verify_ref(s3, config, ref, deadline)
@@ -291,12 +324,18 @@ def run_cycle_v2(s3, config, checkpoint, mappings, store, state=None, deadline=N
                     _verify_ref(s3, config, ref, deadline)
             continue
         _apply_manifest(s3, config, checkpoint, mappings, (key, manifest, digest),
-                        mapping_version, store, deadline)
+                        mapping_version, store, deadline, progress)
+    if progress:
+        progress(state="running", phase="reprojecting", run_id=None,
+                 progress_current=0, progress_total=0)
+    LOG.info("Reprojecting entities with changed mappings")
     _reproject_active(s3, config, checkpoint, mappings, mapping_version, store, deadline)
     _ensure_deadline(deadline)
     checkpoint.set_meta("observed_state_revision", str(state["revision"]))
     checkpoint.set_meta("observed_state_sha256", state_sha)
     checkpoint.set_meta("mapping_version", mapping_version)
+    LOG.info("Cycle completed: epoch_id=%s revision=%s applied_tip_run_id=%s",
+             state["epoch_id"], state["revision"], state["tip_run_id"] or "none")
     return state
 
 
