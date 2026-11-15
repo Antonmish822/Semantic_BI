@@ -1,0 +1,44 @@
+services:
+  loader:
+    image: "ghcr.io/antonmish822/semantic-bi-loader:${IMAGE_TAG:?Set IMAGE_TAG to a published release or SHA tag}"
+    platform: linux/amd64
+    user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
+    init: true
+    restart: unless-stopped
+    secrets:
+      - loader_config
+    volumes:
+      - loader_state:/var/lib/semantic-bi
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  monitor:
+    image: "ghcr.io/antonmish822/semantic-bi-monitor:${IMAGE_TAG:?Set IMAGE_TAG to a published release or SHA tag}"
+    platform: linux/amd64
+    user: "${LOADER_UID:-1000}:${LOADER_GID:-1000}"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      DASHBOARD_ENV_FILE: /run/secrets/dashboard_env
+      DASHBOARD_HOST: 0.0.0.0
+      DASHBOARD_PORT: "8080"
+    secrets:
+      - dashboard_env
+    volumes:
+      - loader_state:/var/lib/semantic-bi:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+secrets:
+  loader_config:
+    file: ./config.yaml
+  dashboard_env:
+    file: ../../rdf_store_monitor/.env
+
+volumes:
+  loader_state:
