@@ -225,6 +225,7 @@ __marimo__/
 # Local loader configuration and SQLite checkpoint
 /deploy/loader/config.local.yaml
 /deploy/loader/config.yaml
+/deploy/loader/additional-station.env
 /deploy/graphdb/config.yaml
 /deploy/graphdb/backups/
 /deploy/fuseki/config.yaml
