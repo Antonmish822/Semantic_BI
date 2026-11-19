@@ -153,6 +153,24 @@ def validate_manifest(manifest: dict[str, Any], portal_prefix: str) -> None:
             if not isinstance(manifest.get(field), str):
                 raise ValueError(f"В snapshot отсутствует {field}")
             normalize_timestamp(manifest[field])
+        t0 = datetime.fromisoformat(normalize_timestamp(manifest["t0"]).replace("Z", "+00:00"))
+        deal_created_from = manifest.get("deal_created_from")
+        if deal_created_from is not None:
+            if not isinstance(deal_created_from, str):
+                raise ValueError("Некорректный deal_created_from")
+            deal_start = datetime.fromisoformat(normalize_timestamp(deal_created_from).replace("Z", "+00:00"))
+            if deal_start > t0 or "deal" in complete:
+                raise ValueError("Сделки в окне нельзя объявлять полными")
+        lead_created_from = manifest.get("lead_created_from")
+        if lead_created_from is not None:
+            if not isinstance(lead_created_from, str):
+                raise ValueError("Некорректный lead_created_from")
+            normalize_timestamp(lead_created_from)
+            lead_start = datetime.fromisoformat(normalize_timestamp(lead_created_from).replace("Z", "+00:00"))
+            if lead_start > t0:
+                raise ValueError("lead_created_from следует за t0")
+        elif counts.get("lead", 0):
+            raise ValueError("Для лидов в snapshot требуется lead_created_from")
         if datetime.fromisoformat(manifest["catchup_to"].replace("Z", "+00:00")) < datetime.fromisoformat(manifest["t0"].replace("Z", "+00:00")):
             raise ValueError("catchup_to предшествует t0")
     else:
