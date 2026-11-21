@@ -159,6 +159,6 @@ Fuseki-репетиции не считается проверкой GraphDB.
 | CI-сборка и публикация контейнеров | Пройдено для коммита `1c7d3d3`: оба образа опубликованы в GHCR, скачаны и запущены из тега ветки |
 | Проверка контейнерного запуска | Пройдено 2026-11-10: loader и monitor запущены без рестартов, monitor API — HTTP 200, Fuseki доступен, loader `caught_up: true`, ошибок нет |
 
-CI workflow получает закрытый submodule `cccr_engine` через `SOURCECRAFT_SSH_KEY`
-и `SOURCECRAFT_KNOWN_HOSTS`; пользователь подтвердил, что они настроены в
-репозитории. GHCR publication подтверждена наличием и запуском обоих образов.
+Текущая сборка устанавливает закреплённый `cccr_py` wheel по URL и хэшу из
+`uv.lock`; CI не использует SourceCraft secrets или исходный submodule.
+GHCR publication подтверждена наличием и запуском обоих образов.

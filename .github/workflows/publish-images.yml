@@ -16,20 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Configure SourceCraft access for cccr_engine submodule
-        env:
-          SOURCECRAFT_SSH_KEY: ${{ secrets.SOURCECRAFT_SSH_KEY }}
-          SOURCECRAFT_KNOWN_HOSTS: ${{ vars.SOURCECRAFT_KNOWN_HOSTS }}
-        run: |
-          test -n "$SOURCECRAFT_SSH_KEY" || { echo "SOURCECRAFT_SSH_KEY is required for cccr_engine." >&2; exit 1; }
-          test -n "$SOURCECRAFT_KNOWN_HOSTS" || { echo "SOURCECRAFT_KNOWN_HOSTS is required for ssh.sourcecraft.dev." >&2; exit 1; }
-          install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' "$SOURCECRAFT_SSH_KEY" > "$HOME/.ssh/id_ed25519"
-          chmod 600 "$HOME/.ssh/id_ed25519"
-          printf '%s\n' "$SOURCECRAFT_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/known_hosts"
-          git submodule update --init cccr_engine
-
       - name: Build and check loader image
         run: |
           docker build --platform linux/amd64 \

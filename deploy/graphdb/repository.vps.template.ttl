@@ -1,0 +1,20 @@
+@prefix rep: <http://www.openrdf.org/config/repository#> .
+@prefix sr: <http://www.openrdf.org/config/repository/sail#> .
+@prefix sail: <http://www.openrdf.org/config/sail#> .
+@prefix graphdb: <http://www.ontotext.com/config/graphdb#> .
+
+[] a rep:Repository ;
+  rep:repositoryID "__REPOSITORY_ID__" ;
+  rep:repositoryTitle "__REPOSITORY_ID__" ;
+  rep:repositoryImpl [
+    rep:repositoryType "graphdb:SailRepository" ;
+    sr:sailImpl [
+      sail:sailType "graphdb:Sail" ;
+      graphdb:ruleset "owl2-rl" ;
+      graphdb:enable-context-index "true" ;
+      graphdb:enablePredicateList "true"^^xsd:boolean ;
+      graphdb:enableLiteralIndex "true"^^xsd:boolean ;
+      graphdb:enableFtsIndex "false"^^xsd:boolean ;
+      graphdb:base-URL "http://example.org/owlim#"
+    ]
+  ] .

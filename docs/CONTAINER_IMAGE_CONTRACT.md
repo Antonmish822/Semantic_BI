@@ -13,7 +13,7 @@
 
 Оба образа публикуются как `linux/amd64`; Compose закрепляет эту архитектуру. На Windows используйте Docker Desktop в режиме Linux containers с backend WSL 2. На macOS требуется Docker Desktop: Intel Mac запускает образ нативно, а Apple Silicon — через эмуляцию amd64, что может быть медленнее. Docker Desktop описывает [режим WSL 2](https://docs.docker.com/desktop/features/wsl/) и [эмуляцию платформ](https://docs.docker.com/build/building/multi-platform/).
 
-Нативный `linux/arm64` образ пока не заявлен: корневой `pyproject.toml` ограничивает окружение Linux `x86_64`, хотя некоторые зависимости CCCR имеют arm64-ассеты. Для нативного запуска на Apple Silicon потребуется отдельная проверка и изменение матрицы платформ, сборки `cccr_engine` и CI. Текущий amd64-образ можно использовать через эмуляцию.
+Нативный `linux/arm64` образ пока не заявлен: корневой `pyproject.toml` и зафиксированный wheel CCCR ограничены Linux `x86_64`. Для нативного запуска на Apple Silicon потребуется отдельная сборка и проверка wheel и CI. Текущий amd64-образ можно использовать через эмуляцию.
 
 ## Теги
 
@@ -26,11 +26,11 @@
 
 GHCR packages хранятся закрытыми. Workflow публикации использует `GITHUB_TOKEN` с `packages: write`; машине развёртывания нужен вход в GHCR с токеном, имеющим `read:packages`. Изменение видимости пакетов на public требует отдельного решения.
 
-В образ включаются только код приложения, CCCR native dependency и runtime dependencies. S3/Fuseki credentials, `.env`, локальные YAML-конфиги и SQLite checkpoint остаются вне образов и передаются контейнерам при запуске.
+В образ включаются код приложения, runtime-зависимости и Python wheel `cccr_py==0.1.0` из GitHub Release `RexarX/cccc-engine`. Конкретный cp313 Linux x86_64 wheel закреплён прямым URL и SHA-256 в `uv.lock`; Dockerfile устанавливает готовый wheel без сборки C++ и `auditwheel`. S3/Fuseki credentials, `.env`, локальные YAML-конфиги и SQLite checkpoint остаются вне образов и передаются контейнерам при запуске.
 
 ## Публикация и развёртывание
 
-1. Workflow получает закрытый `cccr_engine` через `SOURCECRAFT_SSH_KEY` и `SOURCECRAFT_KNOWN_HOSTS`, собирает оба образа и публикует их только при push Git-тега `v*`. Push в ветки может запустить CI-проверки, но не публикует образы.
+1. Workflow устанавливает закреплённый wheel CCCR через `uv.lock`, собирает и проверяет оба образа, затем публикует их только при push Git-тега `v*`. SourceCraft и исходный submodule удалены; сборка зависит только от публичного wheel. Push в ветки может запустить CI-проверки, но не публикует образы.
 2. `deploy/loader/compose.yaml` требует явные `LOADER_IMAGE_TAG` и `MONITOR_IMAGE_TAG`. Укажите один и тот же release tag (`v1.2.0`) либо SHA tag (`sha-<полный-git-sha>`); Compose не подставляет устаревающий branch tag.
 3. Для скачивания закрытых пакетов войдите командой `docker login ghcr.io`, затем выполните `docker compose pull` и `docker compose up -d`. Перезапуск загрузчика сохраняет checkpoint в отдельном внешнем volume.
 

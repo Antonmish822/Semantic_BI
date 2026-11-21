@@ -20,7 +20,7 @@
 - доступ GraphDB для создания repository и учётная запись загрузчика с правом записи в него;
 - доступ на чтение S3: `GetObject` для `state.json`, базового и incremental manifests и всех событий, на которые они ссылаются; `ListBucket` для нужного префикса может понадобиться при диагностике;
 - Docker Engine с Compose, `yc` CLI с настроенным профилем для проверки S3 и доступ к двум опубликованным образам GHCR;
-- checkout всего репозитория `Semantic_BI`. Локальная сборка Python и `cccr_engine` не нужна.
+- checkout всего репозитория `Semantic_BI`. Исходники и локальная сборка CCCR не нужны: `uv sync --locked` устанавливает закреплённый wheel.
 
 Убедитесь, что машина может разрешить hostname GraphDB и выйти к S3 endpoint по HTTPS. Не помещайте S3 и GraphDB пароли в командную строку, shell history или Git.
 

@@ -225,6 +225,10 @@ __marimo__/
 # Local loader configuration and SQLite checkpoint
 /deploy/loader/config.local.yaml
 /deploy/loader/config.yaml
+/deploy/loader/config.vps.yaml
+/deploy/monitor/monitor.vps.env
+/deploy/graphdb/.env.vps
+/deploy/graphdb/*.license
 /deploy/loader/additional-station.env
 /deploy/graphdb/config.yaml
 /deploy/graphdb/backups/

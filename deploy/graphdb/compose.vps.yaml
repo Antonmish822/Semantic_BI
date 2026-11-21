@@ -1,0 +1,52 @@
+services:
+  graphdb:
+    image: ontotext/graphdb:11.5.2
+    restart: unless-stopped
+    init: true
+    cpus: 1.0
+    mem_limit: ${GRAPHDB_MEMORY_LIMIT:-3g}
+    environment:
+      GDB_HEAP_SIZE: ${GRAPHDB_HEAP_SIZE:-2g}
+    command:
+      - -Dgraphdb.license.file=/run/secrets/graphdb.license
+      - -Dgraphdb.home=/opt/graphdb/home
+      - -Dgraphdb.distribution=docker
+    secrets:
+      - source: graphdb_license
+        target: graphdb.license
+    volumes:
+      - graphdb_home:/opt/graphdb/home
+    ports:
+      - "127.0.0.1:${GRAPHDB_HTTP_PORT:-7200}:7200"
+    networks:
+      graphdb:
+        aliases:
+          - graphdb
+    stop_grace_period: 2m
+
+  repository-init:
+    image: curlimages/curl:8.12.1
+    restart: "no"
+    depends_on:
+      - graphdb
+    environment:
+      GRAPHDB_URL: http://graphdb:7200
+      GRAPHDB_REPOSITORY: ${GRAPHDB_REPOSITORY:-bitrix24}
+    entrypoint: ["/bin/sh", "/scripts/create-repository.sh"]
+    volumes:
+      - ./create-repository.sh:/scripts/create-repository.sh:ro
+      - ./repository.vps.template.ttl:/config/repository.ttl:ro
+    networks:
+      - graphdb
+
+secrets:
+  graphdb_license:
+    file: ${GRAPHDB_LICENSE_FILE:?Set GRAPHDB_LICENSE_FILE to the license file on this VPS}
+
+volumes:
+  graphdb_home:
+    name: ${GRAPHDB_HOME_VOLUME:-semantic_bi_graphdb_home}
+
+networks:
+  graphdb:
+    name: ${GRAPHDB_DOCKER_NETWORK:-graphdb_default}

@@ -1,0 +1,23 @@
+s3:
+  bucket: "garpix-bitrix24-v2-parallel-20261114"
+  portal_id: "garpix-bitrix24-ru-v2-parallel"
+  endpoint_url: "https://storage.yandexcloud.net"
+  region: "ru-central1"
+  access_key: "REPLACE_FROM_ACTIVE_LOCAL_ENV_AWS_ACCESS_KEY_ID"
+  secret_key: "REPLACE_FROM_ACTIVE_LOCAL_ENV_AWS_SECRET_ACCESS_KEY"
+mapping:
+  registry_path: "/app/mappings/bitrix24/registry.json"
+  schemas_root: "/app/mappings/bitrix24"
+checkpoint:
+  path: "/var/lib/semantic-bi/state.sqlite3"
+  resume_mode: strict
+backend: graphdb
+graphdb:
+  url: "http://graphdb:7200"
+  repository: "bitrix24"
+  username: ""
+  password: ""
+  timeout_seconds: 90
+  graph_namespace: "urn:bitrix24:entity"
+snapshot_reconcile_entity_types: [deal, user, category, stage, source]
+poll_interval_seconds: 60

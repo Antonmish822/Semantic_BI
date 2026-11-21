@@ -57,14 +57,14 @@ services:
 
 secrets:
   loader_config:
-    file: ./config.yaml
+    file: ${LOADER_CONFIG_FILE:-./config.yaml}
   dashboard_env:
-    file: ../../rdf_store_monitor/.env.graphdb
+    file: ${MONITOR_ENV_FILE:-../../rdf_store_monitor/.env.graphdb}
 
 volumes:
   graphdb_loader_state:
     external: true
-    name: semantic_bi_graphdb_state
+    name: ${LOADER_STATE_VOLUME:-semantic_bi_graphdb_state}
 
 networks:
   graphdb:
