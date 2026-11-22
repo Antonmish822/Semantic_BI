@@ -12,7 +12,7 @@ checkpoint:
   path: "/var/lib/semantic-bi/state.sqlite3"
   # strict downloads and SHA-256 checks every event; fast skips event bodies
   # only when the checkpoint already contains the exact manifest event.
-  resume_mode: strict
+  resume_mode: fast
 contract_v2_limits:
   max_chain_length: 10000
   max_objects_per_run: 1000000

@@ -11,7 +11,7 @@
 | Правила вывода | OWL 2 RL (`owl2-rl`). Индекс контекстов включён |
 | Адрес GraphDB для контейнеров | `http://graphdb:7200` через общую Docker-сеть |
 | Источник S3 | Файл [`.env` активной связки `graphdb-v2-parallel-2`](../local-data/remote-graphdb-v2-20261115/graphdb-v2-parallel-2/.env) |
-| Начальное состояние загрузчика | Отдельный пустой том, `/var/lib/semantic-bi/state.sqlite3`, режим `strict` |
+| Начальное состояние загрузчика | Отдельный пустой том, `/var/lib/semantic-bi/state.sqlite3`, режим `fast` |
 | Статус монитора | `/var/lib/semantic-bi/status.json` из того же тома, подключённого к монитору для чтения |
 | Доступ снаружи | Порты GraphDB и монитора привязаны к localhost VPS. Для просмотра используется SSH-туннель |
 
@@ -29,7 +29,7 @@
 
 ## 3. Подготовить и передать закрытый конфигурационный bundle
 
-Выполняйте подготовку на доверенной рабочей машине, а не в Git checkout на VPS. [Runbook для Codex CLI](../deploy/graphdb/VPS.md) задаёт полный порядок действий агента на сервере. Генератор `scripts/prepare_vps_bundle.py` читает источник S3-настроек [активной связки `graphdb-v2-parallel-2`](../local-data/remote-graphdb-v2-20261115/graphdb-v2-parallel-2/.env), обезличенные шаблоны, лицензию и отдельный Docker auth config; он сверяет несекретные настройки и записывает готовые конфиги с секретами в архив вне checkout с режимом `600`.
+Выполняйте подготовку на доверенной рабочей машине, а не в Git checkout на VPS. [Runbook для DevOps](../deploy/graphdb/VPS.md) описывает ручной сценарий Bash/Compose без Codex CLI на сервере. Генератор `scripts/prepare_vps_bundle.py` читает источник S3-настроек [активной связки `graphdb-v2-parallel-2`](../local-data/remote-graphdb-v2-20261115/graphdb-v2-parallel-2/.env), обезличенные шаблоны, лицензию и отдельный Docker auth config; он сверяет несекретные настройки и записывает готовые конфиги с секретами в архив вне checkout с режимом `600`.
 
 Docker auth config должен быть создан Docker CLI на доверенной машине с PAT classic и `read:packages`. В bundle включается только секция `ghcr.io`; auth config содержит обратимо закодированные credentials, поэтому архив и конфигурация считаются секретами. Передавайте архив на VPS по SSH отдельно от Git. Не выводите его содержимое и не помещайте распакованные файлы в Git.
 
@@ -57,21 +57,21 @@ scp /tmp/semantic-bi-vps-configs.tar.gz deploy@VPS:/tmp/semantic-bi-vps-configs.
 
 Локальные `state/`, SQLite-файлы и резервные копии исходной GraphDB остаются на исходной машине. Если на VPS уже есть том checkpoint или репозиторий с данными, выделить новые ресурсы для чистой установки.
 
-## 4. Развернуть через Codex CLI и принять стенд
+## 4. Развернуть через Bash и принять стенд
 
-Запустите Codex CLI на VPS из deployment checkout и поручите ему выполнить [runbook](../deploy/graphdb/VPS.md). Инструкция содержит проверяемые пред-условия, конкретные команды Compose, проверку безопасного состава bundle, назначения владельцев/прав, создание новых пустых томов, двукратный запуск GraphDB repository initializer, сетевую проверку и первый strict `--once` цикл. После отчёта первого цикла агент обязан остановиться и дождаться явной приёмки оператора до запуска фоновых loader и monitor.
+Получите согласованный deployment tag/SHA и bundle по защищённому каналу. На VPS выполните `deploy/vps.sh bootstrap --revision <tag-or-SHA> --bundle /secure/path/bundle.tar.gz`; скрипт проверит, что указанный revision совпадает с `HEAD`. Затем проверяйте `deploy/vps.sh status`. Первый `--once` цикл работает в именованном detached-контейнере. Явная команда `deploy/vps.sh start` является приёмкой первого импорта и запускает loader/monitor.
 
 На VPS Docker CLI получает переданный `docker-config/config.json` через `DOCKER_CONFIG` и скачивает образы. Ручной `docker login` на VPS не требуется. GitHub Actions публикует образы с `GITHUB_TOKEN` и разрешением `packages: write`; PAT `read:packages` используется только при создании переносимого auth config на доверенной рабочей машине. [Документация GHCR](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
 
 ## 5. Критерии готовности
 
-Проверки и точные команды выполняет Codex CLI по [runbook на VPS](../deploy/graphdb/VPS.md). До приёмки должны быть подтверждены: оба приватных образа скачиваются; Compose-конфигурации валидны; checkpoint volume пустой и доступен UID `10001`; GraphDB принимает лицензию и два последовательных запуска initializer завершаются успешно; repository `bitrix24` пуст, имеет `owl2-rl` и включённый context index; loader достигает GraphDB по `http://graphdb:7200`; первый strict `--once` цикл успешно прочитал базовый snapshot v2 и догнал доступные инкременты.
+До приёмки должны быть подтверждены: оба приватных образа скачиваются; Compose-конфигурации валидны; checkpoint volume пустой и доступен UID `10001`; GraphDB принимает лицензию и repository initializer подтверждает `owl2-rl` и context index; repository `bitrix24` пуст; loader достигает GraphDB по `http://graphdb:7200`; первый `fast`-цикл через `--once` успешно прочитал базовый snapshot v2 и догнал доступные инкременты. `deploy/vps.sh status` подтверждает exit code 0 и свежий status.json с `mode=once`, `state=idle`, `error=null`, `contract_version=2`.
 
-После отчёта по первому циклу оператор принимает результат. Только после явной приёмки Codex CLI запускает постоянный loader и monitor. При ошибке любого этапа агент прекращает зависимые действия, сохраняет данные для диагностики и сообщает точный шаг, код выхода и безопасные сведения из логов. Локальные RDF-данные и SQLite checkpoint не копируются на VPS.
+При ошибке любого этапа сохраните данные и checkpoint для диагностики. Продолжение инициирует DevOps командой `deploy/vps.sh bootstrap --revision <тот-же-tag-or-SHA> --resume`, которая требует те же маркированные volumes и неизменные S3/GraphDB конфиги. Локальные RDF-данные и SQLite checkpoint не копируются на VPS.
 
 ## Результат подготовки в рабочей копии
 
-- Добавлен VPS-маршрут с двумя именованными Compose-проектами, отдельными томами, сетью GraphDB, конфигами вне checkout, первым `--once` strict циклом и последующим запуском фоновых сервисов. Прежнее имя GraphDB data volume и checkpoint volume остаются значениями по умолчанию; smoke использует настраиваемое имя GraphDB data volume.
+- Добавлен VPS-маршрут с двумя именованными Compose-проектами, отдельными томами, сетью GraphDB, конфигами вне checkout, первым `--once` fast циклом и последующим запуском фоновых сервисов.
 - Инициализатор ограничивает ожидание API, создаёт отсутствующий repository и подтверждает `owl2-rl` с включённым context index. Несоответствие существующей конфигурации приводит к ошибке без изменения repository.
 - Несекретные bucket, portal ID, endpoint и region из локального `.env` согласованы с шаблонами. Генератор читает access key и secret key только для включения в закрытый архив вне checkout; он не печатает их и не записывает в отслеживаемые файлы. Локальный `.env` не изменялся.
 - Старый gitlink `7c5b5116d0b178a6d315b639762602364c49365a` недоступен с публичного GitHub URL. Release `v0.1.0` содержит готовые cp310–cp313 wheels; cp313 wheel закреплён URL и SHA-256 в `uv.lock`. Его установка и `import cccr_py` проверены на `python:3.13.9-slim-trixie`. Loader Dockerfile успешно собрался без native build и `auditwheel`, импортировал `cccr_py`, выполнил все 25 loader tests; runtime image также прошёл `--help`. Исходный submodule и скрипт native-сборки удалены; оба workflow используют готовый wheel без SourceCraft.

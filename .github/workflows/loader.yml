@@ -6,6 +6,33 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check VPS deployment script
+        run: |
+          bash -n deploy/vps.sh
+          python3 -m py_compile scripts/prepare_vps_bundle.py
+      - name: Validate VPS Compose files with test configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          touch "$tmp/license" "$tmp/loader.yaml" "$tmp/monitor.env"
+          cat > "$tmp/graph.env" <<EOF
+          GRAPHDB_LICENSE_FILE=$tmp/license
+          GRAPHDB_REPOSITORY=bitrix24
+          GRAPHDB_DOCKER_NETWORK=graphdb_default
+          GRAPHDB_HOME_VOLUME=ci_graphdb_home
+          EOF
+          cat > "$tmp/runtime.env" <<EOF
+          LOADER_IMAGE_TAG=ci-test
+          MONITOR_IMAGE_TAG=ci-test
+          LOADER_CONFIG_FILE=$tmp/loader.yaml
+          MONITOR_ENV_FILE=$tmp/monitor.env
+          LOADER_STATE_VOLUME=ci_loader_state
+          GRAPHDB_DOCKER_NETWORK=graphdb_default
+          EOF
+          docker compose -p semantic-bi-graphdb --env-file "$tmp/graph.env" -f deploy/graphdb/compose.vps.yaml config --quiet
+          docker compose -p semantic-bi-runtime --env-file "$tmp/runtime.env" -f deploy/graphdb/compose.yaml config --quiet
       - name: Build image with release wheel and test runtime
         run: docker build --platform linux/amd64 -f deploy/loader/Dockerfile -t semantic-bi-loader:ci .
       - name: Check entrypoint

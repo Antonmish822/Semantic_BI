@@ -79,7 +79,7 @@ mapping:
 
 checkpoint:
   path: "/var/lib/semantic-bi/state.sqlite3"
-  resume_mode: strict
+  resume_mode: fast
 
 backend: graphdb
 graphdb:
@@ -96,7 +96,7 @@ poll_interval_seconds: 60
 
 `portal_id` должен совпадать с префиксом данных экспортёра в S3. Для него код строит путь `bitrix24/<portal_id>/`. Перепроверьте его по расположению `state.json` в бакете.
 
-Оставьте `resume_mode: strict` для первичной загрузки и приёмки. Не добавляйте `lead` в `snapshot_reconcile_entity_types`: текущий код запрещает сверку лидов как полного snapshot. Перечень reconciliation оставьте по умолчанию, только если экспортёр подтверждает полноту этих типов; он влияет на удаление из GraphDB сущностей, отсутствующих в полном snapshot. Активности не включайте. Для исходного рабочего v2 бакета используйте `bucket: garpix-bitrix24-v2-parallel-20261114` и `portal_id: garpix-bitrix24-ru-v2-parallel`; пакет передачи содержит готовые значения и ключи.
+Используйте `resume_mode: fast` для первичной загрузки и последующих циклов. В этом режиме загрузчик не перечитывает объекты уже подтверждённого префикса цепочки при догонке новых инкрементов. Не добавляйте `lead` в `snapshot_reconcile_entity_types`: текущий код запрещает сверку лидов как полного snapshot. Перечень reconciliation оставьте по умолчанию, только если экспортёр подтверждает полноту этих типов; он влияет на удаление из GraphDB сущностей, отсутствующих в полном snapshot. Активности не включайте. Для исходного рабочего v2 бакета используйте `bucket: garpix-bitrix24-v2-parallel-20261114` и `portal_id: garpix-bitrix24-ru-v2-parallel`; пакет передачи содержит готовые значения и ключи.
 
 Compose создаст новый отдельный том `loader_state`; путь checkpoint внутри контейнера должен остаться `/var/lib/semantic-bi/state.sqlite3`. Для данного repository используйте собственный checkpoint и далее всегда сохраняйте пару GraphDB repository + этот checkpoint вместе. Не используйте для чистого запуска обычный `deploy/loader/compose.yaml`: он подключает внешний том прежней установки.
 
